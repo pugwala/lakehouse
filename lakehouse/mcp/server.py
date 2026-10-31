@@ -1,13 +1,16 @@
 """MCP server for the home-lab lakehouse: governed metrics from Cube, meanings from the glossary.
 
 Tools
+    list_metrics()                                    every metric query_metric offers: its view, data product,
+                                                      description, aggregation and dimensions
     query_metric(metric, group_by=None, limit=100)   a Cube measure by name, optionally grouped by dimensions; a
                                                       data product's metric also says which months are final
     define_term(term)                                 a glossary term from OpenMetadata: definition, synonyms,
                                                       columns, metrics, sensitivity and typed relations
 
 Served over streamable HTTP at /mcp (stateless, JSON responses) and through Caddy at https://<LAKE_TS_HOST>/mcp.
-Every request needs `Authorization: Bearer <MCP_TOKEN>`. The server holds no lake credentials: query_metric goes
+Every request needs `Authorization: Bearer <MCP_TOKEN>`. The server holds no lake credentials: list_metrics and
+query_metric go
 through Cube's REST API, so an agent sees only Cube's governed model, never the lake. define_term reads the
 Lakehouse glossary in OpenMetadata (loaded there by om_sync.py) as mcp-reader, a read-only account.
 """
@@ -39,7 +42,8 @@ _om_token = {"value": None}
 server = MCPServer(
     name="lakehouse",
     instructions="Governed metrics and definitions for the home-lab lakehouse's mock offender data. Ask "
-                 "query_metric for a metric by name (an unknown name lists the real ones) and define_term "
+                 "list_metrics for what can be asked, query_metric for a metric by name (an unknown name lists "
+                 "the real ones) and define_term "
                  "for what a term means. There is no raw SQL access, by design.")
 
 
@@ -65,6 +69,22 @@ class MetricResult(BaseModel):
     group_by: list[str]
     rows: list[dict[str, Any]]
     readiness: Readiness | None = None
+
+
+class Metric(BaseModel):
+    """One metric in one Cube view: what it counts, how it aggregates, and the dimensions it can be grouped by."""
+    name: str
+    view: str
+    title: str
+    description: str
+    aggregation: str
+    product: str | None
+    dimensions: list[str]
+
+
+class MetricList(BaseModel):
+    """Every metric query_metric offers, one entry per view that has it."""
+    metrics: list[Metric]
 
 
 class Relation(BaseModel):
@@ -160,6 +180,25 @@ def pick(metric, group_by, cat):
             return measure, dims
     measure = measures[0]
     return measure, [resolve(name, cat["dimensions"], prefer_cube=measure.split(".", 1)[0]) for name in group_by]
+
+
+@server.tool()
+def list_metrics() -> MetricList:
+    """Every governed metric you can ask query_metric for, one entry per Cube view that offers it: its name, view,
+    title, description, aggregation, data product (if the view is one) and the dimensions you can group it by. The
+    same name can sit in several views with different dimensions; pass "view.name" to query_metric to pick one.
+    aggregation countDistinct counts distinct people or things: never add its values across groups."""
+    short = lambda full: full.split(".", 1)[1]   # noqa: E731
+    metrics = []
+    for c in cube("meta")["cubes"]:
+        dims = [short(d["name"]) for d in c.get("dimensions", []) if d.get("public", True)]
+        for m in c.get("measures", []):
+            if m.get("public", True):
+                metrics.append(Metric(name=short(m["name"]), view=c["name"],
+                                      title=m.get("shortTitle") or short(m["name"]),
+                                      description=m.get("description") or "", aggregation=m.get("aggType") or "",
+                                      product=(c.get("meta") or {}).get("product"), dimensions=dims))
+    return MetricList(metrics=metrics)
 
 
 @server.tool()

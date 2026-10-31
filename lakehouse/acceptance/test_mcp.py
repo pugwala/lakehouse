@@ -1,4 +1,4 @@
-"""Acceptance test for the MCP server (Phase 4): query_metric over Cube, define_term over the glossary.
+"""Acceptance test for the MCP server (Phase 4): list_metrics and query_metric over Cube, define_term over the glossary.
 
     docker compose --profile core exec -T jupyter pytest -q lakehouse/acceptance/test_mcp.py
 
@@ -48,11 +48,11 @@ def test_refuses_requests_without_the_right_token(token):
     assert rpc("tools/list", token=token).status_code == 401
 
 
-def test_offers_exactly_query_metric_and_define_term():
-    """The server lists the two tools the plan calls for, and nothing else."""
+def test_offers_exactly_its_three_tools():
+    """The server lists list_metrics, query_metric and define_term, and nothing else."""
     r = rpc("tools/list")
     r.raise_for_status()
-    assert {t["name"] for t in r.json()["result"]["tools"]} == {"query_metric", "define_term"}
+    assert {t["name"] for t in r.json()["result"]["tools"]} == {"list_metrics", "query_metric", "define_term"}
 
 
 def test_server_holds_no_lake_or_admin_credentials():
@@ -98,6 +98,40 @@ def test_restricted_columns_come_back_masked():
     """The MCP server's token has no groups, so a restricted column comes back masked: no race codes leak."""
     is_error, result, _ = call("query_metric", metric="record_count", group_by=["race_code"])
     assert not is_error and result["rows"] == [{"race_code": "***", "record_count": 100_000}]
+
+
+# --- list_metrics ----------------------------------------------------------------------------------------------
+
+def metrics():
+    """list_metrics' entries, after checking the call succeeded."""
+    is_error, result, text = call("list_metrics")
+    assert not is_error, text
+    return result["metrics"]
+
+
+def test_list_metrics_names_every_metric_query_metric_knows():
+    """list_metrics offers exactly the metrics query_metric accepts: the ones its unknown-metric error names."""
+    _, _, text = call("query_metric", metric="no_such_metric")
+    known = {name.strip() for name in text.split("Metrics:", 1)[1].split(",")}
+    assert {m["name"] for m in metrics()} == known
+
+
+def test_list_metrics_says_where_each_metric_lives():
+    """Each entry names its view, data product and dimensions: people_in_custody is in both custody views, each
+    its own product's; record_count is in offender_records, with custody_level, and belongs to no product."""
+    by_view = {(m["name"], m["view"]): m for m in metrics()}
+    assert by_view[("people_in_custody", "custody_population")]["product"] == "custody-population"
+    assert by_view[("people_in_custody", "custody_offenses")]["product"] == "custody-offenses"
+    record_count = by_view[("record_count", "offender_records")]
+    assert record_count["product"] is None and "custody_level" in record_count["dimensions"]
+    assert record_count["title"] == "Record Count" and record_count["description"]
+
+
+def test_list_metrics_flags_counts_of_distinct_people():
+    """A count of distinct people says so (countDistinct): its values never add up across groups."""
+    by_view = {(m["name"], m["view"]): m for m in metrics()}
+    assert by_view[("people_in_custody", "custody_population")]["aggregation"] == "countDistinct"
+    assert by_view[("record_count", "offender_records")]["aggregation"] == "count"
 
 
 # --- define_term -----------------------------------------------------------------------------------------------

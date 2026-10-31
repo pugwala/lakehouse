@@ -23,7 +23,7 @@ every number matches the Facilitator Guide. dbt builds gold, and Dagster runs it
 | `orchestration/` | Dagster definitions and instance config |
 | `scripts/set-dagster-ui-password.sh` | Puts a login in front of the Dagster UI (it has none of its own) |
 | `scripts/stage_model.py` | Stages session 7's embedding model on the lake disk at a pinned revision (bootstrap.sh runs it) |
-| `mcp/` | The MCP server (`server.py`, Dockerfile, pinned requirements): `query_metric` over Cube, `define_term` over OpenMetadata's glossary |
+| `mcp/` | The MCP server (`server.py`, Dockerfile, pinned requirements): `list_metrics` and `query_metric` over Cube, `define_term` over OpenMetadata's glossary |
 | `openmetadata/` | `setup_admin.py` (replaces the default admin password, creates the read-only `mcp-reader`) `om_sync.py` (pushes the glossary, the Sensitivity tags and every lake table into OpenMetadata) and `om_to_rdf.py` (publishes that meaning to Fuseki as RDF) |
 | `monitoring/` | Prometheus config, probe targets and alert rules (`prometheus/`), Alertmanager config (`alertmanager/`), blackbox modules (`blackbox/`), Grafana provisioning, the Home Lakehouse dashboard and `set_home.py` (`grafana/`) |
 | `ntfy/` | ntfy, where alerts go: `server.yml` (deny-all, which user may do what), `start.sh` (declares the users from `.env`), `templates/lakehouse.yml` (the notification and its priority) |
@@ -264,8 +264,11 @@ single-file bind mount keeps showing the old one, which is how a Caddyfile chang
 
 ### MCP: governed metrics and definitions for an AI agent
 
-An MCP server at `https://<LAKE_TS_HOST>/mcp` gives an agent two tools instead of SQL access:
+An MCP server at `https://<LAKE_TS_HOST>/mcp` gives an agent three tools instead of SQL access:
 
+- `list_metrics()`: every metric `query_metric` offers, one entry per Cube view that has it, with its title,
+  description, data product, dimensions and aggregation. `countDistinct` marks a count of distinct people, whose
+  values never add up across groups. A name in several views (`people_in_custody`) is picked with `view.name`.
 - `query_metric(metric, group_by=[], limit=100)`: a Cube measure by name (`record_count`, `total_restitution`,
   `answers_changed`, ...), optionally grouped by dimensions (`custody_level`, `unit_name`, `offense_against`, ...).
   It goes through Cube's REST API, so it sees only Cube's model; an unknown name lists the real ones.
@@ -589,7 +592,7 @@ only says there's nothing to check. Its first run passed all 14 checks on a GitH
 | Trust Test from loader to dashboard (`silver.trust_test` → `gold.trust_test` → Cube → Superset): 1 parity check, 4 acceptance tests and 3 bats tests, each shown failing before the code existed | On the VM |
 | `%load_ext lakehouse.sql_magic` (jupysql, read-only as `lake_ro`): 6 acceptance tests (`pytest lakehouse/acceptance/test_sql.py`), plus a real notebook kernel run from outside the repo; the password and read-only checks were shown to fail on deliberate breaks | On the VM |
 | Phase 3 notebooks: model staged offline, `08_from_lake.ipynb`, the `notebook_smoke` job: 7 acceptance tests (`pytest lakehouse/acceptance/test_notebooks.py`) and 3 bats tests, each seen failing first; the first smoke run (all 8 notebooks, 110 s) passed with session 5's 22 of 22 reconciliation and session 6's F1 0.898 | On the VM |
-| MCP server (`query_metric`, `define_term`): 13 acceptance tests (`pytest lakehouse/acceptance/test_mcp.py`) and 4 bats tests, each seen failing first; the token check and synonym matching were shown to fail on deliberate breaks; checked end to end through Caddy (total restitution 1,333,587,950.77) | On the VM |
+| MCP server (`list_metrics`, `query_metric`, `define_term`): 16 acceptance tests (`pytest lakehouse/acceptance/test_mcp.py`) and 4 bats tests, each seen failing first; the token check and synonym matching were shown to fail on deliberate breaks; checked end to end through Caddy (total restitution 1,333,587,950.77) | On the VM |
 | OpenMetadata 2.0.5 with OpenSearch 2.19.6 under `/openmetadata`, no default credentials left: 8 acceptance tests (`pytest lakehouse/acceptance/test_openmetadata.py`) and 5 bats tests, each seen failing first; restarting with `--check` kept the same signing keys | On the VM |
 | `om_sync.py` (glossary with typed relations, Sensitivity tags, every lake table) and `define_term` reading OpenMetadata: 9 acceptance tests (`pytest lakehouse/acceptance/test_om_sync.py`); an edit in OpenMetadata reached `define_term`, and `om_sync.py` put it back with the relations intact | On the VM |
 | Tags-to-masks loop (`cube/sync_masks.py`): 4 acceptance tests (`pytest lakehouse/acceptance/test_masks.py`) and 3 bats tests, each seen failing first; live, tagging `gender` Restricted in OpenMetadata masked it in Cube (`***` for all 100,000), and removing the tag restored the real values and a byte-identical model | On the VM |
