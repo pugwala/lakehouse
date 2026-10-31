@@ -92,7 +92,7 @@ does what's missing, so it's safe to run again at any time; on a healthy install
 ```bash
 # New VM: Debian with Docker, your user in the docker group, the data disk formatted and mounted at /lake
 # (see below). Then:
-git clone -b duckdb-lakehouse https://github.com/pugwala/lunch-and-learn-data-cleansing.git ~/lunch-and-learn-data-cleansing
+git clone -b duckdb-lakehouse https://github.com/pugwala/homelake.git ~/lunch-and-learn-data-cleansing
 bash ~/lunch-and-learn-data-cleansing/lakehouse/scripts/bootstrap.sh
 
 # Upgrade: pull, then run it again. It rebuilds the image (cached layers make this quick) and restarts what changed.

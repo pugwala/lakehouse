@@ -18,7 +18,7 @@ import yaml
 LAKEHOUSE = Path(__file__).resolve().parents[1]
 REPO = LAKEHOUSE.parent
 RUNBOOKS = LAKEHOUSE / "runbooks"
-BASE = "https://github.com/pugwala/lunch-and-learn-data-cleansing/blob/duckdb-lakehouse/lakehouse/runbooks/"
+BASE = "https://github.com/pugwala/homelake/blob/duckdb-lakehouse/lakehouse/runbooks/"
 SECTIONS = ["## What it means", "## What to check", "## How to fix it", "## When it clears"]
 PROMETHEUS = os.environ.get("PROMETHEUS_URL", "http://prometheus:9090/prometheus")
 RULES = {r["alert"]: r for g in yaml.safe_load((LAKEHOUSE / "monitoring" / "prometheus" / "rules" /
