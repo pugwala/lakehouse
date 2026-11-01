@@ -17,11 +17,14 @@ BRANDING = re.compile(r"lunch\s*(?:&|&amp;|and)\s*learn|lunch-and-learn(?!-data-
 OLD_REPO_LINK = re.compile(r"github\.com/pugwala/lunch-and-learn", re.IGNORECASE)
 
 
+SELF = Path(__file__).resolve().relative_to(REPO).as_posix()   # this file has to name what it forbids
+
+
 def texts():
-    """{path: text} for every file git tracks, PDFs left out."""
+    """{path: text} for every file git tracks, PDFs and this test itself left out."""
     names = subprocess.run(["git", "-c", "safe.directory=*", "-C", str(REPO), "ls-files"], check=True,
                            capture_output=True, text=True).stdout.split("\n")
-    return {n: (REPO / n).read_text(errors="ignore") for n in names if n and not n.endswith(".pdf")}
+    return {n: (REPO / n).read_text(errors="ignore") for n in names if n and not n.endswith(".pdf") and n != SELF}
 
 
 def hits(pattern):
