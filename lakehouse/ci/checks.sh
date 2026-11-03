@@ -107,7 +107,7 @@ compose_validates() {
 # folders.
 sandbox() {
   (cd "$REPO" && LAKE_CATALOG="$WORK/lake.duckdb" LNL_DATA_DIR="$WORK/data" HANDOFF_ROOT="$WORK/handoff" DBT_TARGET=local \
-     PYTHONPATH="$REPO" PATH="$WORK/venv/bin:$PATH" "$@")
+     PYTHONPATH="$REPO:$REPO/course1" PATH="$WORK/venv/bin:$PATH" "$@")
 }
 
 # cube_models SWITCH: the model files cube.js hands Cube with LAKEHOUSE_COURSE1=SWITCH, asked of Cube's own image.
@@ -131,7 +131,7 @@ copy_tree
 REPO=$WORK/repo
 PY=$WORK/venv/bin/python
 check python python_env
-check compile "$PY" -m compileall -q "$REPO/lakehouse" "$REPO/lnl" "$REPO/generator"
+check compile "$PY" -m compileall -q "$REPO/lakehouse" "$REPO/course1/lnl" "$REPO/course1/generator"
 check yaml yaml_parses
 check docstrings "$PY" -m pytest -q -p no:cacheprovider "$REPO/lakehouse/acceptance/test_docstrings.py"
 check ontology ontology_parses

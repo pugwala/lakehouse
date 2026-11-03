@@ -34,7 +34,7 @@ CORE_RECORDS = scale.CORE_RECORDS
 FIRST_DAY = days(date(1996, 1, 1))
 NEVER = np.iinfo(np.int32).max            # "no first power day" in the pools
 SIDES = ("villain", "hero", "civilian")
-NEW_VILLAIN_SHARE = 0.6   # chance a fight's random villain slot goes to a new villain (chunk 5b, Ian's option B)
+NEW_VILLAIN_SHARE = 0.6   # chance a fight's random villain slot goes to a new villain (chunk 5b, wrolfgar's option B)
 OUTCOMES = np.asarray(["captured", "partial", "escaped"], dtype=object)
 INCIDENT_TYPES = {"street fight": 0.28, "robbery": 0.2, "heist": 0.12, "rampage": 0.1, "standoff": 0.1,
                   "sabotage": 0.08, "abduction": 0.07, "breakout": 0.05}

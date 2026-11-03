@@ -57,14 +57,14 @@ def repo_copy(tmp_path_factory):
     live manifest Dagster reads."""
     root = tmp_path_factory.mktemp("repo")
     skip = shutil.ignore_patterns("target", "logs", "__pycache__", ".ipynb_checkpoints", "*.duckdb")
-    for folder in ("lakehouse", "lnl", "notebooks", "generator"):
+    for folder in ("lakehouse", "course1/lnl", "course1/notebooks", "course1/generator"):
         shutil.copytree(REPO / folder, root / folder, ignore=skip)
     return root
 
 
 def run_in(copy: Path, switch: str, code: str) -> dict:
     """Run python code in the copy with the switch set (and a throwaway local lake for dbt); return its JSON."""
-    env = {**os.environ, addon.SWITCH: switch, "DBT_TARGET": "local", "PYTHONPATH": str(copy),
+    env = {**os.environ, addon.SWITCH: switch, "DBT_TARGET": "local", "PYTHONPATH": f"{copy}:{copy / 'course1'}",
            "LAKE_CATALOG": str(copy / "lake.duckdb")}
     out = subprocess.run([sys.executable, "-c", code], cwd=copy, env=env, capture_output=True, text=True)
     assert out.returncode == 0, out.stderr[-3000:]

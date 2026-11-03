@@ -538,7 +538,7 @@ lake_housekeeping_schedule = dg.ScheduleDefinition(
 # ---- Weekly notebook smoke run --------------------------------------------------------------------------------
 # The course notebooks as delivered (exercise blanks unfilled, so their checkers print a prompt, not an error),
 # plus the lakehouse's own bridge notebook. Executed copies land in /lake/notebook-runs/<date>_<run>/.
-NOTEBOOKS = [*sorted((REPO / "notebooks").glob("0*.ipynb")), REPO / "lakehouse" / "08_from_lake.ipynb"]
+NOTEBOOKS = course1_addon.notebooks()   # course1/notebooks/0*.ipynb, then lakehouse/08_from_lake.ipynb
 NOTEBOOK_RUNS = Path(os.environ.get("NOTEBOOK_RUNS", "/lake/notebook-runs"))
 
 

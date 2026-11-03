@@ -16,8 +16,8 @@ ARG PIP_CUTOFF=2026-10-12
 RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.14.1
 
 # Course requirements: their own layer, so changing the lakehouse packages below doesn't reinstall these.
-COPY requirements.txt /tmp/lnl-requirements.txt
-COPY wheels/ /tmp/wheels/
+COPY course1/requirements.txt /tmp/lnl-requirements.txt
+COPY course1/wheels/ /tmp/wheels/
 RUN pip install --no-cache-dir --uploaded-prior-to "$PIP_CUTOFF" -r /tmp/lnl-requirements.txt \
  && pip install --no-cache-dir /tmp/wheels/*.whl
 

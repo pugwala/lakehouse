@@ -128,7 +128,7 @@ def test_todays_people_are_convicted_only_through_their_records(world):
 
 def test_convictions_outnumber_dismissals(world):
     """New villains fight often enough (fights.NEW_VILLAIN_SHARE) that at least half the charges after today's
-    records are on new people, so convictions (convicted or pleaded guilty) outnumber dismissals (chunk 5b, Ian's
+    records are on new people, so convictions (convicted or pleaded guilty) outnumber dismissals (chunk 5b, wrolfgar's
     option B: today's people, who are only convicted through their records, no longer swamp the courts)."""
     _, con = world
     assert one(con, f"SELECT avg((NOT is_core)::INT) FROM charged WHERE charge_id >= {scale.CORE_RECORDS}") >= 0.5

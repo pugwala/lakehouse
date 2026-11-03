@@ -1,5 +1,5 @@
 # Alertmanager for the home-lab lakehouse (Phase 6). Alerts go to ntfy on this VM (the ntfy service), one topic each:
-# lakehouse-alerts is what Ian's phone subscribes to; Watchdog, which always fires on purpose, goes to
+# lakehouse-alerts is what wrolfgar's phone subscribes to; Watchdog, which always fires on purpose, goes to
 # lakehouse-heartbeat instead, so it never buzzes the phone but its silence there means alerting is down; and
 # whatever monitoring_selftest raises (the acceptance tests make it fail on purpose) goes to lakehouse-selftest.
 # ntfy's lakehouse template (ntfy/templates/lakehouse.yml) formats each one and sets its priority from its severity.

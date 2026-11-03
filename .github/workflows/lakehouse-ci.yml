@@ -1,6 +1,6 @@
-# Lakehouse checks: everything that needs no secrets and no running stack (lakehouse/ci/checks.sh). The course
-# branch (main) has no lakehouse/, so there it only says so. GitHub starts no runs from pushes on this repo, so
-# start it by hand: gh workflow run lakehouse-ci.yml --ref duckdb-lakehouse (or the Actions tab).
+# Lakehouse checks: everything that needs no secrets and no running stack (lakehouse/ci/checks.sh), on every push
+# and pull request, or by hand: gh workflow run lakehouse-ci.yml --ref main (or the Actions tab). Course 1 is the
+# submodule course1/, checked out at its pin, since the handoff check runs its code.
 name: lakehouse-ci
 
 on:
@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.1
+        with:
+          submodules: true   # course 1, pinned at its tag (course1/)
       - name: Is there a lakehouse on this branch?
         id: here
         run: |

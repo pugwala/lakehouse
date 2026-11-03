@@ -119,6 +119,14 @@ fi
 
 # ---------------------------------------------------------------------------------------------------------------
 step "3/7 Repo permissions"
+# Course 1 is the git submodule course1/, pinned at a tag (Priority 8): the image and the handoff need its code. A
+# clone without --recurse-submodules leaves it empty, and a pull that moves the pin leaves it behind; both are fixed
+# here. `git submodule status` starts with " " at the pinned commit, "-" when not checked out, "+" when moved.
+case $(git -C "$REPO" submodule status course1 2>/dev/null | cut -c1) in
+  " ") ok "course 1 (course1/) is checked out at its pin" ;;
+  *) if [ $CHECK = 1 ]; then bad "course 1 (course1/) is not checked out at its pin (git submodule update --init course1)"
+     else git -C "$REPO" submodule update --init course1 >/dev/null && did "checked out course 1 (course1/) at its pin"; fi ;;
+esac
 # The containers run as uid 1000 and write into the mounted repo (pytest cache, notebook saves). If you log in
 # as a different uid, ACLs let both of you write. -d sets the default ACL that new files inherit.
 me=$(id -u)

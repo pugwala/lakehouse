@@ -11,7 +11,7 @@ CORE_RECORDS = 94_120         # offender records with a SID and a sentence date:
 
 FACTORS = {"S": 0.1, "M": 1.0, "L": 4.0}
 
-# table: (fixed rows, scaled rows at M). Approved by Ian on 2026-11-01 (chunk 0).
+# table: (fixed rows, scaled rows at M). Approved by wrolfgar on 2026-11-01 (chunk 0).
 MODEL = {
     "person":           (CORE_PEOPLE, 440_000 - CORE_PEOPLE),
     "power":            (400, 0),

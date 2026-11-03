@@ -18,6 +18,7 @@ setup() {
   export FAKE_CURL_DOWN="" FAKE_DASH_EXIT=0 FAKE_MODEL_EXIT=0 FAKE_MASKS_EXIT=0 FAKE_RULES_EXIT=0 FAKE_HANDOFF_EXIT=0
   export FAKE_MASKS_OUT="Cube masks: in step with OpenMetadata (6 restricted columns masked)"
   export FAKE_PG_UP=""   # what `up -d --wait catalog-pg` prints; Compose says "Recreated" when it replaced the container
+  export FAKE_COURSE1=" "   # git submodule status's first character for course1/: " " at its pin, "-" not checked out, "+" moved
   : > "$FAKE_LOG"
   cat > "$ENV" <<EOF
 POSTGRES_PASSWORD=pg-secret
@@ -103,6 +104,12 @@ EOF
   stub tailscale <<'EOF'
 echo '{"Self": {"DNSName": "lakehouse.example.invalid."}}'
 EOF
+  stub git <<'EOF'
+case "$*" in
+  *"submodule status course1"*)        echo "${FAKE_COURSE1}9689d7ba60d580ff65828ad106d23db733d2dbc6 course1 (course1-v1.0)" ;;
+  *"submodule update --init course1"*) exit 0 ;;
+esac
+EOF
   stub sudo <<'EOF'
 case $1 in chown|apt-get) exit 0 ;; esac   # can't chown to 1000 without root; record it and move on
 exec "$@"
@@ -123,6 +130,40 @@ called()        { grep -q -- "$1" "$FAKE_LOG"; }
 not_called()    { ! grep -q -- "$1" "$FAKE_LOG"; }
 # set_env KEY [VALUE]: set KEY in the test .env, or remove it when no VALUE is given.
 set_env()       { sed -i "/^$1=/d" "$ENV"; [ $# = 1 ] || echo "$1=$2" >> "$ENV"; chmod 600 "$ENV"; }
+
+# --- course 1, the pinned submodule ----------------------------------------------------------------------------
+
+@test "course 1 at its pin passes without checking anything out" {
+  run_bootstrap
+  [ "$status" -eq 0 ]
+  [[ $output == *"course 1 (course1/) is checked out at its pin"* ]]
+  not_called "submodule update"
+}
+
+@test "checks out course 1 when a clone left course1/ empty, before the image is built" {
+  FAKE_COURSE1="-"
+  run_bootstrap
+  [ "$status" -eq 0 ]
+  [[ $output == *"checked out course 1 (course1/) at its pin"* ]]
+  update=$(grep -n "submodule update --init course1" "$FAKE_LOG" | head -1 | cut -d: -f1)
+  build=$(grep -n " build " "$FAKE_LOG" | head -1 | cut -d: -f1)
+  [ -n "$update" ] && [ -n "$build" ] && [ "$update" -lt "$build" ]
+}
+
+@test "moves course 1 back to its pin when it has drifted" {
+  FAKE_COURSE1="+"
+  run_bootstrap
+  [ "$status" -eq 0 ]
+  called "submodule update --init course1"
+}
+
+@test "--check only reports a course 1 that isn't at its pin" {
+  FAKE_COURSE1="-"
+  run_bootstrap --check
+  [ "$status" -eq 1 ]
+  [[ $output == *"course 1 (course1/) is not checked out at its pin"* ]]
+  not_called "submodule update"
+}
 
 # --- data disk -------------------------------------------------------------------------------------------------
 

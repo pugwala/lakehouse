@@ -96,11 +96,11 @@ does what's missing, so it's safe to run again at any time; on a healthy install
 ```bash
 # New VM: Debian with Docker, your user in the docker group, the data disk formatted and mounted at /lake
 # (see below). Then:
-git clone -b duckdb-lakehouse https://github.com/pugwala/homelake.git ~/lunch-and-learn-data-cleansing
-bash ~/lunch-and-learn-data-cleansing/lakehouse/scripts/bootstrap.sh
+git clone --recurse-submodules https://github.com/pugwala/lakehouse.git ~/lakehouse
+bash ~/lakehouse/lakehouse/scripts/bootstrap.sh
 
 # Upgrade: pull, then run it again. It rebuilds the image (cached layers make this quick) and restarts what changed.
-git -C ~/lunch-and-learn-data-cleansing pull && bash ~/lunch-and-learn-data-cleansing/lakehouse/scripts/bootstrap.sh
+git -C ~/lakehouse pull && bash ~/lakehouse/lakehouse/scripts/bootstrap.sh
 
 bash lakehouse/scripts/bootstrap.sh --check    # verify only, changes nothing
 bash lakehouse/scripts/bootstrap.sh --reload   # also re-run the loader even if the lake has data
@@ -451,7 +451,7 @@ publish, `ian` (the phone) and `checker` (the tests) may only read, and only the
 
 | Topic | What goes there | Who reads it |
 | --- | --- | --- |
-| `lakehouse-alerts` | Every alert, except the two below | Ian's phone |
+| `lakehouse-alerts` | Every alert, except the two below | wrolfgar's phone |
 | `lakehouse-heartbeat` | Watchdog, every 4 hours, at min priority | The tests: silence there means alerting is down |
 | `lakehouse-selftest` | Whatever `monitoring_selftest` raises (the tests fail it on purpose) | The tests, so testing never buzzes the phone |
 
@@ -620,6 +620,27 @@ docker compose --profile core exec -T jupyter python lakehouse/readiness/closes.
 **Adding an input, or a dependency**, with no code: copy `products/inputs/records.yml` to a new file and fill it in;
 add its name to a product's `depends_on:`; run `scripts/bootstrap.sh` (or wait for 05:00). `test_readiness.py`,
 the SHACL shapes and dbt's tests pick it up on their own.
+
+## Course 1, the pinned submodule
+
+Course 2 has its own repo, `pugwala/lakehouse` (Priority 8, 2026-11-03). Course 1 is not copied into it: it is the
+git submodule `course1/`, which is `pugwala/homelake` at the tag `course1-v1.0` (its `main`: sessions 1 to 7, `lnl`,
+the generator, the notebooks and the Facilitator Guide). Only the course 1 side of the handoff
+(`handoff/publish.py`, `parity.py`) and course 1's add-on run that code, and they find it there. Course 2's own
+code, `lake.py` and `universe/` among it, imports none of it.
+
+- **Cloning:** `git clone --recurse-submodules`. A plain clone leaves `course1/` empty, and a pull that moves the
+  pin leaves it behind; `bootstrap.sh` checks it out at the pin either way (with `--check` it only reports).
+- **Moving to a new course 1:** tag homelake's `main` (`course1-vX.Y`), `git -C course1 checkout <tag>`, set
+  `COURSE1_TAG` in `course1_addon.py`, commit `course1` with it, then republish and adopt the handoff as below. A
+  pin that moves without a new handoff fails the `handoff` check if course 1's output changed.
+- **Where things are:** `course1_addon.COURSE1_ROOT` and `notebooks()`; the Jupyter image installs
+  `course1/requirements.txt` and `course1/wheels/`; Compose and CI put `course1/` on `PYTHONPATH`.
+
+Tests: `pytest lakehouse/tests/test_course1_pin.py` (4: course 1 only in `course1/`, `.gitmodules` and the tag,
+everything that runs it finds it there, `lake.py` imports none of it), `lakehouse/acceptance/test_course1_tag.py`
+(1, needs git: the recorded commit is the tag's and the checkout is clean) and 4 bats tests (bootstrap checks
+course 1 out before the image build, moves it back to the pin, only reports with `--check`); 16 mutations caught.
 
 ## Course 1's handoff
 
@@ -1005,8 +1026,8 @@ on a copy of the working tree (never `.env`, never dbt's `target/`), in about a 
   mistake of 2026-10-27.
 
 On GitHub, `.github/workflows/lakehouse-ci.yml` runs the same script on every push and pull request, and by hand
-(`gh workflow run lakehouse-ci.yml --ref duckdb-lakehouse`); on the course branch, which has no `lakehouse/`, it
-only says there's nothing to check. Its first run passed all 14 checks on a GitHub runner in about 2.5 minutes.
+(`gh workflow run lakehouse-ci.yml --ref main`), with course 1 checked out at its pin. Its first run passed all 14
+checks on a GitHub runner in about 2.5 minutes.
 
 | Piece | Where it has run |
 | --- | --- |
@@ -1052,10 +1073,13 @@ only says there's nothing to check. Its first run passed all 14 checks on a GitH
 | The world's data products (three descriptors, two domains, two inputs, four Cube views, monthly contracts, the Fights, Damage and Courts dashboard, freshness from Dagster materializations): 19 acceptance tests (`test_world_products.py`), all seen failing first; 7 mutations all caught | On the VM |
 | Incident reports, the free text (`universe/reports.py`, the mention key, the world's bronze and silver, the Incident Report term): 13 tests in `test_universe_reports.py`, 1 more in `test_world_lake.py` and the reports' checks in `test_world_meaning.py`, all seen failing first; 15 mutations all caught. Live at M: 200,000 reports, 1,893,406 mentions, every one at its place in silver; the tagger tags the narrative free text on its own | On the VM |
 | Scale-up and benchmarks (`universe/bench.py`: a scale end to end in a scratch DuckLake, never the live one): 8 tests in `test_universe_bench.py`, all seen failing first; 13 mutations all caught. Run at M and L: L (65.6M rows) built in 164 s at a 27.6 GB peak, dbt in 44 s with every answer-key test passing, every benchmark query under 0.3 s | On the VM |
+| Course 2's own repo with course 1 as the pinned submodule `course1/`: 4 tests in `test_course1_pin.py`, 1 in `acceptance/test_course1_tag.py`, 4 bats tests, all seen failing first; 16 mutations caught. `ci/checks.sh` 17 of 17 on the new layout (course 1's handoff, published from the submodule, matches the lock byte for byte) | On the VM and GitHub |
 
 ## Next phases
 
-**Dataset expansion:** chunks 0 to 10 and Priority 5 (incident reports) are done: the approved model is complete and benchmarked at L (in `/lake/scratch/L`; the live lab stays at M). Next is chunk 11, the optional course sessions.
+**Dataset expansion:** chunks 0 to 10 and Priority 5 (incident reports) are done: the approved model is complete and benchmarked at L (in `/lake/scratch/L`; the live lab stays at M). Course 2 has its own repo, `pugwala/lakehouse`
+(Priority 8). Next: moving the live stack onto it, the course 2 notebooks out of course 1, and chunk 11, the
+optional course sessions.
 
 Phases 0 to 6 are done: OpenMetadata holds the glossary and the sensitivity tags, the tags drive Cube's masks,
 Fuseki serves the same meaning as SPARQL, and Prometheus, Grafana and Alertmanager watch the platform, the pipeline

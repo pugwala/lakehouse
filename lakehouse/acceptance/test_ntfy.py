@@ -6,9 +6,9 @@ ntfy v2.30.0 runs on this VM and is reached only on the tailnet, at https://<LAK
 (ntfy can't live under a sub-path). Nothing is open to anyone: default access is deny-all, and three users are
 declared in config with only what each needs. alertmanager may only publish to the lakehouse-* topics; ian reads
 them from the ntfy phone app; checker reads them for these tests. Alertmanager posts its webhook JSON and
-ntfy/templates/lakehouse.yml turns it into a notification whose priority follows the alert's severity. Topics: lakehouse-alerts (Ian's phone),
+ntfy/templates/lakehouse.yml turns it into a notification whose priority follows the alert's severity. Topics: lakehouse-alerts (wrolfgar's phone),
 lakehouse-heartbeat (Watchdog, every 4 hours, so silence there means alerting is down) and lakehouse-selftest
-(the alert monitoring_selftest raises in tests, kept off Ian's phone).
+(the alert monitoring_selftest raises in tests, kept off wrolfgar's phone).
 """
 import json
 import os
@@ -78,7 +78,7 @@ def test_caddy_serves_ntfy_on_its_own_port():
 
 def test_the_watchdog_heartbeat_arrives():
     """Watchdog always fires and is re-sent every 4 hours to lakehouse-heartbeat: alerting works end to end, from
-    Prometheus through Alertmanager to ntfy, right now. It never goes to Ian's phone topic."""
+    Prometheus through Alertmanager to ntfy, right now. It never goes to wrolfgar's phone topic."""
     deadline = time.time() + 120   # right after a fresh start, the first one lands after Alertmanager's group_wait
     while not (beats := [m for m in messages("lakehouse-heartbeat", since="5h") if "Watchdog" in m.get("title", "")]):
         assert time.time() < deadline, "no Watchdog notification on lakehouse-heartbeat in the last 5 hours"

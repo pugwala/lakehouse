@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "course1"))   # course 1 (lnl), the pinned submodule
 
 from lakehouse import lake  # noqa: E402
 from lnl import config  # noqa: E402

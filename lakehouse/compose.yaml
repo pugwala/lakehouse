@@ -14,7 +14,7 @@ x-lake-env: &lake-env
   DBT_TARGET: lake
   HF_HOME: /lake/models/huggingface   # session 7's model, staged at a pinned revision by bootstrap.sh
   HF_HUB_OFFLINE: "1"                # notebooks never download from Hugging Face
-  PYTHONPATH: /home/jovyan/course     # a notebook in any folder can import lakehouse (and lnl)
+  PYTHONPATH: /home/jovyan/course:/home/jovyan/course/course1   # any notebook can import lakehouse, and lnl from course 1
   LAKEHOUSE_COURSE1: ${LAKEHOUSE_COURSE1:-on}   # course 1's add-on (lakehouse/course1_addon.py): on or off
 
 x-om-env: &om-env   # OpenMetadata server and its migration step share these settings
@@ -559,7 +559,7 @@ services:
 
   # Alerts from Prometheus's rules (monitoring/prometheus/rules/), at https://<LAKE_TS_HOST>/alertmanager/ behind
   # basic auth. Alertmanager hands each one to ntfy (monitoring/alertmanager/alertmanager.yml), which pushes it to
-  # Ian's phone; Watchdog and the selftest's alerts go to topics of their own.
+  # wrolfgar's phone; Watchdog and the selftest's alerts go to topics of their own.
   # Where alerts go: ntfy, only on the tailnet, at https://<LAKE_TS_HOST>:8443/ through Caddy (ntfy can't sit under a
   # path). Deny-all by default; start.sh declares three users from the plain passwords in .env: alertmanager
   # (publishes), ian (the phone app reads) and checker (the tests read). Settings in ntfy/server.yml, the notification

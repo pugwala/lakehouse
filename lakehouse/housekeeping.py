@@ -6,7 +6,7 @@ Every daily load replaces each table, and DuckLake keeps every replaced file so 
 Left alone, that history grows forever. This runs weekly (the Dagster job lake_housekeeping, Sundays 03:30 Central,
 before the 05:00 load) and does DuckLake's own maintenance, in DuckLake's order:
 
-1. expire snapshots older than RETENTION_DAYS (30, Ian's choice); the current snapshot is never expired
+1. expire snapshots older than RETENTION_DAYS (30, wrolfgar's choice); the current snapshot is never expired
 2. merge small adjacent files into bigger ones
 3. delete files that no snapshot needs any more, once they have waited FILE_GRACE (a day), so a query that started
    before step 1 can still finish reading them

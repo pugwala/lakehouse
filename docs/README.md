@@ -20,7 +20,6 @@ Who's who in these docs:
 | [lakehouse-plan.md](lakehouse-plan.md) | The original phased plan (Phases 0 to 7), what was actually built, and Phase 8, the expanded world | [DuckDB Home Lakehouse Plan](https://claude.ai/artifact/Js8ovfd7HE7BJ5Sj6TS3Sj) |
 | [ontology-guide.md](ontology-guide.md) | How to query the knowledge graph in Apache Jena Fuseki: vocabulary, SPARQL recipes, business rules | [How to Use the Lakehouse Ontology](https://claude.ai/artifact/QZzDB9Lp8k94cXoU7smD7S) |
 | [course-boundary.md](course-boundary.md) | Where course 1 (cleansing) ends and course 2 (the lakehouse) begins, and the handoff between them | [Course 1 / Course 2 Boundary](https://claude.ai/artifact/R1688c4LU7fYfwiQGJQDij) |
-| [student-handout.pdf](student-handout.pdf) | The course's student handout | |
 
 The Claude Doc links open only for their owner; the Markdown here is the readable copy. Diagrams embedded in
 the docs (the Plan's architecture drawing, the ontology guide's figures) don't export and show as placeholders.

@@ -5,7 +5,7 @@
 Every daily load replaces each table, and DuckLake keeps every replaced file so you can query the lake as it was.
 Without housekeeping that history grows forever (two days of loads left 302 of 320 Parquet files, 533 of 571 MB,
 as history). lakehouse/housekeeping.py, run weekly by the Dagster job lake_housekeeping (Sundays 03:30 Central),
-expires snapshots older than 30 days (Ian's choice), merges small files, deletes the files no snapshot needs once
+expires snapshots older than 30 days (wrolfgar's choice), merges small files, deletes the files no snapshot needs once
 they have waited a day, and deletes orphaned files (written but never committed) older than a week. Personal data
 that changed or was deleted is therefore gone from history within a month too. The destructive steps are tested
 here on a scratch DuckLake in a temporary folder, never on the lake itself.

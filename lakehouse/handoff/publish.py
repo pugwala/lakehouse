@@ -23,11 +23,12 @@ from pathlib import Path
 import duckdb
 import pandas as pd
 
+from ..course1_addon import COURSE1_ROOT
 from . import parity, receive
 
 VERSION = "v2"
 SOURCE_ROWS, SOURCE_SEED = 100_000, 2026
-GENERATOR = Path(__file__).resolve().parents[2] / "generator" / "gen_hero_offenders.py"
+GENERATOR = COURSE1_ROOT / "generator" / "gen_hero_offenders.py"   # course 1, the submodule course1/
 sha256 = receive.sha256
 
 

@@ -33,7 +33,7 @@ def test_notebook_services_share_the_notebook_environment():
         env = compose_env(service)
         assert env.get("HF_HOME") == HF_HOME, service
         assert str(env.get("HF_HUB_OFFLINE")) == "1", service
-        assert env.get("PYTHONPATH") == "/home/jovyan/course", service
+        assert env.get("PYTHONPATH") == "/home/jovyan/course:/home/jovyan/course/course1", service
         assert "LAKE_RO_PASSWORD" in str(env.get("LAKE_RO_PASSWORD", "")), service   # 08 reads as lake_ro
 
 
@@ -80,7 +80,7 @@ def test_from_lake_notebook_rebuilds_the_trust_test(tmp_path):
 from test_daily_run import graphql  # noqa: E402
 
 NOTEBOOK_RUNS = Path("/lake/notebook-runs")
-SMOKE_NOTEBOOKS = sorted([*(p.name for p in (LAKEHOUSE.parent / "notebooks").glob("0*.ipynb")), "08_from_lake.ipynb"])
+SMOKE_NOTEBOOKS = sorted([*(p.name for p in (LAKEHOUSE.parent / "course1" / "notebooks").glob("0*.ipynb")), "08_from_lake.ipynb"])
 
 
 def test_notebook_smoke_job_runs_weekly():
@@ -147,7 +147,7 @@ def test_session_7_few_shot_beats_the_rules_with_the_fallback(tmp_path, monkeypa
     empty.mkdir()
     monkeypatch.setenv("HF_HOME", str(empty))   # the kernel inherits this: no model, so the course falls back
     out = tmp_path / "07_text_meaning.ipynb"
-    nb = LAKEHOUSE.parent / "notebooks" / "07_text_meaning.ipynb"
+    nb = LAKEHOUSE.parent / "course1" / "notebooks" / "07_text_meaning.ipynb"
     papermill.execute_notebook(str(nb), str(out), cwd=str(nb.parent), kernel_name="python3", progress_bar=False)
     f1, method = session_7_f1(out)
     assert method == "lsa"

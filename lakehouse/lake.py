@@ -22,8 +22,6 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from lnl import env
-
 LAKE = "lake"
 SCHEMAS = ["ref", "bronze", "silver", "gold", "ops"]
 SENSITIVE_COLUMNS = ["race", "race_code", "race_omb", "religion", "religion_group", "religion_family",
@@ -47,7 +45,15 @@ TABLE_COMMENTS = {
 # ---- Connection ---------------------------------------------------------------------------------
 def catalog() -> str:
     """Where the lake's catalog is: LAKE_CATALOG (ducklake:postgres:... on the VM), else a DuckDB file in the data dir."""
-    return os.environ.get("LAKE_CATALOG", str(env.data_dir() / "lake.duckdb"))
+    return os.environ.get("LAKE_CATALOG", str(data_dir() / "lake.duckdb"))
+
+
+def data_dir() -> Path:
+    """The folder for a plain-file lake: LNL_DATA_DIR (the same setting course 1 uses), else /tmp/lnl_data. Made if
+    missing. Course 2's own code, so the lake never imports course 1."""
+    path = Path(os.environ.get("LNL_DATA_DIR", "/tmp/lnl_data"))
+    path.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 def is_ducklake() -> bool:

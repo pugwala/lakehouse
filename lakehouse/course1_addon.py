@@ -20,8 +20,16 @@ Course 1's handed-over data (lakehouse/handoff, silver.trust_test among it) land
 built on top of it. The daily run pushes lakehouse_course1_addon_enabled, so the NotebookSmokeStale alert only
 counts while the add-on is on. Turning it off on a running lab stops building the pieces; tables, cubes and
 dashboards it built before stay until removed (README, "Course 1's add-on").
+
+Course 1's code itself is not in this repo (Priority 8, 2026-11-03): it is the git submodule course1/ (COURSE1_ROOT),
+pugwala/homelake pinned at the tag COURSE1_TAG. Anything that runs course 1's code finds it there.
 """
 import os
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+COURSE1_ROOT = REPO / "course1"
+COURSE1_TAG = "course1-v1.0"
 
 SWITCH = "LAKEHOUSE_COURSE1"
 PIECES = {
@@ -41,3 +49,9 @@ def enabled() -> bool:
     if value not in ("on", "off"):
         raise ValueError(f"{SWITCH} must be on or off, not {value!r}")
     return value == "on"
+
+
+def notebooks() -> list[Path]:
+    """What notebook_smoke runs, in order: course 1's seven session notebooks (course1/notebooks/0*.ipynb), then the
+    lakehouse's bridge notebook (PIECES["notebooks"])."""
+    return [*sorted((COURSE1_ROOT / "notebooks").glob("0*.ipynb")), *(REPO / p for p in PIECES["notebooks"])]

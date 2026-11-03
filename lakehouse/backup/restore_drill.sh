@@ -55,7 +55,7 @@ snapshots=$(dc exec -T catalog-pg psql -U postgres -d "$DB" -tAc 'select count(*
 echo "Restore drill: running the parity checks on the restored lake ($snapshots snapshots)"
 PGPASSWORD=$(env_val LAKE_RW_PASSWORD) docker run --rm --network "$NETWORK" -e PGPASSWORD \
   -e LAKE_CATALOG="ducklake:postgres:dbname=$DB host=catalog-pg user=lake_rw" -e LAKE_DATA_PATH=/lake/data/ \
-  -e LNL_DATA_DIR=/tmp/lnl -e PYTHONPATH=/course -e PYTHONDONTWRITEBYTECODE=1 \
+  -e LNL_DATA_DIR=/tmp/lnl -e PYTHONPATH=/course:/course/course1 -e PYTHONDONTWRITEBYTECODE=1 \
   -v "$REPO_ROOT:/course:ro" -v "$RESTORED/lake/data:/lake/data:ro" -w /course --entrypoint python \
   lnl-jupyter:local -m pytest -q -p no:cacheprovider lakehouse/tests \
   || fail "the parity checks failed on the restored lake"

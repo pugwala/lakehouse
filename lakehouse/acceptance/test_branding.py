@@ -1,12 +1,11 @@
-"""Acceptance test for homelake, Ian's own lab copy of the course repo: no Lunch & Learn branding, and every
-link to the repo points at homelake.
+"""Acceptance test for the public repos: no Lunch & Learn branding, and no link to the old course repo.
 
-    docker run --rm -u "$(id -u)" -v ~/homelake:/repo -w /repo --entrypoint pytest lnl-jupyter:local -q -p no:cacheprovider lakehouse/acceptance/test_homelake.py
+    pytest lakehouse/acceptance/test_branding.py     # on a git checkout (needs git; no running stack)
 
-Functional names stay as they are, because things that exist depend on them: the VM folder
-~/lunch-and-learn-data-cleansing (the live stack runs from it), the Databricks volume lunch_and_learn, the lnl
-package, and the cleanup notebook's search for old copies of the old repo. docs/student-handout.pdf is binary and
-is not checked here.
+Course 2 (pugwala/lakehouse) and course 1 (pugwala/homelake, the submodule course1/) are the lab's own repos. This
+checks every file git tracks here; course 1's files are checked by the same test in homelake. Functional names
+stay as they are, because things that exist depend on them: the VM folder ~/lunch-and-learn-data-cleansing (the
+live stack runs from it), the Databricks volume lunch_and_learn and the lnl package.
 """
 import re
 import subprocess
@@ -21,10 +20,11 @@ SELF = Path(__file__).resolve().relative_to(REPO).as_posix()   # this file has t
 
 
 def texts():
-    """{path: text} for every file git tracks, PDFs and this test itself left out."""
+    """{path: text} for every file git tracks here, PDFs, this test and the course1/ submodule left out."""
     names = subprocess.run(["git", "-c", "safe.directory=*", "-C", str(REPO), "ls-files"], check=True,
                            capture_output=True, text=True).stdout.split("\n")
-    return {n: (REPO / n).read_text(errors="ignore") for n in names if n and not n.endswith(".pdf") and n != SELF}
+    return {n: (REPO / n).read_text(errors="ignore") for n in names
+            if n and (REPO / n).is_file() and not n.endswith(".pdf") and n != SELF}   # course1/ is a submodule: a folder
 
 
 def hits(pattern):

@@ -4,10 +4,10 @@
 
 Prometheus evaluates monitoring/prometheus/rules/lakehouse.yml (platform, pipeline, data quality, backups) and sends
 what fires to Alertmanager v0.34.1, served at https://<LAKE_TS_HOST>/alertmanager/ behind Caddy's basic auth.
-Alertmanager delivers to ntfy on this VM (acceptance/test_ntfy.py): alerts to lakehouse-alerts, the topic Ian's
+Alertmanager delivers to ntfy on this VM (acceptance/test_ntfy.py): alerts to lakehouse-alerts, the topic wrolfgar's
 phone subscribes to; Watchdog, which always fires on purpose, to lakehouse-heartbeat,
 so its silence means alerting itself is down; and the alert monitoring_selftest raises in these tests to
-lakehouse-selftest, so testing never buzzes Ian's phone. ntfy/templates/lakehouse.yml turns each into a notification
+lakehouse-selftest, so testing never buzzes wrolfgar's phone. ntfy/templates/lakehouse.yml turns each into a notification
 and sets its priority from the alert's severity (critical firing: high). Prometheus scrapes Alertmanager too, and
 AlertDeliveryFailing fires when a notification fails.
 """
@@ -121,7 +121,7 @@ def selftest_notices(after):
 
 def test_a_failed_job_raises_an_alert_and_a_success_clears_it():
     """monitoring_selftest set to fail makes JobFailing fire in Alertmanager and arrive in ntfy (on the selftest
-    topic, not Ian's) at high priority, as JobFailing is critical; set to pass, the alert resolves and ntfy gets the
+    topic, not wrolfgar's) at high priority, as JobFailing is critical; set to pass, the alert resolves and ntfy gets the
     resolved notice, at low priority."""
     started = int(time.time())
     assert launch("monitoring_selftest", {"ops": {"selftest": {"config": {"fail": True}}}}) == "FAILURE"
@@ -143,4 +143,4 @@ def test_a_failed_job_raises_an_alert_and_a_success_clears_it():
     assert {p for m, p in notices if "Status: Resolved" in m} == {2}, notices
     assert all("runbooks/JobFailing.md" in m for m, _ in notices), notices   # the link to what to do, on the phone
     assert not [m for m in messages("lakehouse-alerts", since="1h") if m["time"] >= started
-                and "monitoring_selftest" in m["message"]], "the selftest's alert reached Ian's phone topic"
+                and "monitoring_selftest" in m["message"]], "the selftest's alert reached wrolfgar's phone topic"
