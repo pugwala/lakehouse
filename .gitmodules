@@ -1,3 +1,4 @@
 [submodule "course1"]
 	path = course1
 	url = https://github.com/pugwala/homelake.git
+	ignore = untracked

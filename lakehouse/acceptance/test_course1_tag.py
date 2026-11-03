@@ -5,7 +5,7 @@
 lakehouse/tests/test_course1_pin.py checks that course 1 lives only in the submodule course1/ and that everything
 finds it there. This checks the pin itself, which needs git (the CI sandbox is a plain copy): the commit this repo
 records for course1/ is the commit of homelake's tag course1-v1.0 (course1_addon.COURSE1_TAG), and the checked-out
-submodule is at that commit, with nothing changed in it.
+submodule is at that commit, with no tracked file changed (running course 1's code leaves __pycache__/ in it).
 """
 import subprocess
 import sys
@@ -18,8 +18,10 @@ from lakehouse import course1_addon as addon  # noqa: E402
 
 
 def git(*args: str, cwd: Path = REPO) -> str:
-    """Run git in a folder and return its output, stripped."""
-    return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, check=True).stdout.strip()
+    """Run git in a folder and return its output, stripped. safe.directory=*: in the containers the repo belongs to
+    another uid, and git refuses such a repo otherwise."""
+    return subprocess.run(["git", "-c", "safe.directory=*", *args], cwd=cwd, capture_output=True, text=True,
+                          check=True).stdout.strip()
 
 
 def test_course_1_is_pinned_at_its_tag():
@@ -29,4 +31,4 @@ def test_course_1_is_pinned_at_its_tag():
     tagged = git("rev-parse", f"{addon.COURSE1_TAG}^{{commit}}", cwd=addon.COURSE1_ROOT)
     assert recorded == tagged, f"course1/ is pinned at {recorded[:7]}, but {addon.COURSE1_TAG} is {tagged[:7]}"
     assert git("rev-parse", "HEAD", cwd=addon.COURSE1_ROOT) == tagged
-    assert git("status", "--porcelain", cwd=addon.COURSE1_ROOT) == ""
+    assert git("status", "--porcelain", "--untracked-files=no", cwd=addon.COURSE1_ROOT) == ""   # bytecode caches aren't changes
