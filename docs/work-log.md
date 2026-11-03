@@ -47,7 +47,7 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 
 ## Up next
 
-**Now:** Priorities 1 to 6, 4b and 8 are done: the course 1 / course 2 boundary, automatic tagging, the incident reports (so the approved data model is complete), chunk 10 (the scale-up to L, benchmarked in a scratch lake of its own) and course 2's own repo, `pugwala/lakehouse`, with course 1 as a pinned submodule. So is the find\_by\_tags MCP tool, along with phases 0 to 7, dataset-expansion chunks 0 to 10 and all seven MCP tools. The live stack runs from the new repo since 2026-11-03. Next: the course 2 notebooks out of course 1, chunk 11 (7) and the how-to document (9). Each waits for wrolfgar's go-ahead. The other unticked items are housekeeping, done whenever there's room.
+**Now:** Priorities 1 to 6, 4b and 8 are done: the course 1 / course 2 boundary, automatic tagging, the incident reports (so the approved data model is complete), chunk 10 (the scale-up to L, benchmarked in a scratch lake of its own) and course 2's own repo, `pugwala/lakehouse`, with course 1 as a pinned submodule. So is the find\_by\_tags MCP tool, along with phases 0 to 7, dataset-expansion chunks 0 to 10 and all seven MCP tools. The live stack runs from the new repo since 2026-11-03. The enterprise track is split too (course1-v1.1). Next: course 1's side of the VM handoff (publish.py, parity.py) into course 1, chunk 11 (7) and the how-to document (9). Each waits for wrolfgar's go-ahead. The other unticked items are housekeeping, done whenever there's room.
 
 - [x] Steps 1 to 5 of the recovery plan (see the entries below), the Handoff doc update, and the `core-plus-dagster` snapshot
 - [x] Passwordless sudo: kept permanently by wrolfgar's decision
@@ -122,8 +122,38 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 - [ ] Priority 7: chunk 11, course sessions (optional), on the settled boundary
 - [x] Priority 8: course 2 in its own repo (wrolfgar's call; homelake could become it), depending on course 1 at a tagged version, so the how-to document's paths and links are final
 - [x] Switch the live stack to a clone of `pugwala/lakehouse` (bootstrap from `~/lakehouse`, every service and check); then retire the old repo's `duckdb-lakehouse` and homelake's
-- [ ] Move the course 2 notebooks (enterprise 02 §5, 03, 04, 05, databricks.yml) out of course 1, trim 00, and move `handoff/publish.py` + `parity.py` to course 1's side; tag `course1-v1.1` and move the pin
+- [x] Move the course 2 notebooks (enterprise 02 §5, 03, 04, 05, databricks.yml) out of course 1, trim 00, and move `handoff/publish.py` + `parity.py` to course 1's side; tag `course1-v1.1` and move the pin
+- [ ] Move `handoff/publish.py` + `parity.py` (course 1's side of the VM handoff) into course 1, and point course 2's bootstrap, Dagster parity check, CI and tests at them; tag `course1-v1.2`
+- [ ] Run both enterprise tracks once on the agency workspace (nothing has run on Databricks yet)
 - [ ] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Today the MCP tools are described only in lakehouse/README.md (MCP section) and the server's docstrings.
+
+## 2026-11-03 · The enterprise track split at the boundary (course1-v1.1)
+
+**Result:** the Databricks enterprise track now follows the course boundary. Course 1 keeps 00 (trimmed), 01 and 02 sections 1-4, and 02 ends by handing the next two deliveries over in a handoff folder of the volume, with a fingerprinted manifest. Course 2's new `enterprise/` folder has its own helpers and settings, and its own 00, 02b (the next delivery), 03, 04, 05, the job's quality task and a job-only bundle. Course 1 is tagged `course1-v1.1` (homelake `main` `08ac0af`), and course 2 pins it (`49089ed`). Nothing in either track has run on Databricks.
+
+**Why:** wrolfgar: "Move the course 2 notebooks out of course 1". Asked how course 2's notebooks should get what they need, he chose "Course 2 owns its helpers". Then: "Just do whatever you recommend to complete a chunk and then pull up for the next go ahead".
+
+**What we found:**
+
+- Every enterprise notebook finds course 1's `lnl/` in its Git folder and uses `lnl.enterprise` and `lnl/config.py`. 02 §5 and 04 make new deliveries by running course 1's generator (`land_batch`).
+- Standard Databricks Git folders don't support submodules; only Git folders with Git CLI access do, a preview that depends on the workspace ([limits](https://docs.databricks.com/aws/en/repos/limits)). So course 2's notebooks can't count on `course1/` on the agency workspace.
+- The VM's handoff (`/lake/landing/handoff`) never reaches Databricks, so the deliveries are handed over inside the workspace instead, the same way: files plus a manifest of row counts and SHA-256.
+
+**What we did:**
+
+- **Course 1** (homelake, `course1-v1.1`): 00 drops the destination, system-table and restricted-group checks and keeps `ANALYST_GROUP` (01's grants). 02's §5 "The next delivery" is replaced by "Hand over the next deliveries": `lnl.enterprise.stage_deliveries(N)` writes `batch_002.csv` (1,000 new records) and `batch_003.csv` (1,000, three with a 7-digit offender number) to `<volume>/handoff/deliveries/` with `manifest.json`. 03, 04, 05 and `tasks/validate_quality` are removed. `lnl.enterprise` drops `land_batch`, `move_to_rejected` and the job helpers. `lnl/config.py` drops `RESTRICTED_GROUP`, the alert settings and the job's cluster. The bundle declares only the pipeline. The READMEs and the Facilitator Guide say where the rest went.
+- **Course 2** (`enterprise/`): `helpers.py` (`find_pipeline` by name, `land_delivery` that checks the fingerprint, `move_to_rejected`, the job) and `settings.py` (the same catalog, schema and volume as course 1). The notebooks were rebuilt from course 1's originals by a script: setup cells find course 2's own folder, `config.` became `settings.`, 04's `ensure_pipeline` became `find_pipeline`, `land_batch(N, 3, bad_ids=3)` became `land_delivery(N, "batch_003.csv")`, and moved cells keep their ids. The bundle looks the pipeline ID up by name (`lookup: pipeline:`). There is a new README.
+- Not in this chunk, on purpose: moving `handoff/publish.py` and `parity.py` to course 1. That changes how the live stack's bootstrap, Dagster and CI publish, so it gets its own step.
+
+**Verified:**
+
+- `test_enterprise_track.py`, 14 tests, all red first. They cover both sides of the split, that every `ent.X` and `settings.X` a notebook uses exists, that nothing imports `lnl` or runs the generator (in code, not docstrings), clean notebooks, unique cell ids, and the bundle. The delivery handoff is run for real: course 1's code stages into a temporary folder, and course 2 lands one delivery and refuses an unlisted or changed one.
+- 16 mutations caught; the clean tree is green.
+- Two of my own mistakes were caught on the way. The rewrite turned `lnl/config.py` into `lnl/settings.py`, because the `config.` rule ran first. Rebuilt cells had lost their nbformat 4.5 ids (a new test, then fixed in both courses).
+- Every notebook in both tracks validates with nbformat, and every code cell parses.
+- `checks.sh` 17 of 17 with the new pin (the VM handoff stays byte-identical). 29 tests pass inside the live stack. `test_course1_pin` was red, then green, for the new tag.
+
+**Next:** move `handoff/publish.py` and `parity.py` to course 1's side, then chunk 11 and the how-to doc, each on wrolfgar's go.
 
 ## 2026-11-03 · The live stack now runs from pugwala/lakehouse
 
@@ -152,7 +182,7 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 - Dagster: all five schedules load from the new code and are RUNNING; `daily_lake` succeeded.
 - Acceptance 360 of 363. The other 3: the pin test (fixed above, then green), plus the two known stale tests (the RAM threshold and the hard-coded Sept 30 headline: 80,877 now). The runbook test passed against the live Prometheus, whose alerts now link to `pugwala/lakehouse`.
 
-**Note:** Claude Code keeps its memory per project folder. Sessions started in `~/lunch-and-learn-data-cleansing` still find it; a session started in `~/lakehouse` would start with none until it's copied over.
+**Note:** Claude Code keeps its memory per project folder. Sessions started in `~/lunch-and-learn-data-cleansing` still find it; a session started in `~/lakehouse` would have started with none, so on wrolfgar's "Copy it across" (15:40 CST) the 37 memory files were copied to that folder's project. The copies don't sync: new sessions start in \~/lakehouse, and the old copy is frozen. claude-mem's project also follows the folder, so a session there is project "lakehouse".
 
 **Next:** move the course 2 notebooks out of course 1 (tag `course1-v1.1`), then chunk 11 and the how-to doc, each on wrolfgar's go.
 
