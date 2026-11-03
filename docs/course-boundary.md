@@ -2,7 +2,7 @@
 
 # Course 1 / Course 2 Boundary
 
-Updated Nov 2, 2026 · @wrolfgar
+Updated Nov 3, 2026 · @wrolfgar
 
 ## The decision
 
@@ -78,7 +78,7 @@ Six ties connect course 2 to course 1 today; priorities 2, 3, 4 and 8 remove the
 | The course's mess kinds are copied by hand | `universe/mess.py` | Priority 2: becomes course 2's own documented spec |
 | The core is cleansed by course 1's pandas pipeline in course 2's daily run | `lake.py` | Priority 3: the handoff contract |
 | Course 1's material runs in course 2's platform: Trust Test, the 19-number parity gate, `notebook_smoke` | Dagster, Cube, Superset | Priority 4: an optional add-on |
-| Course 2 lives on a branch of the course repo (`duckdb-lakehouse`) | the repo | Priority 8: its own repo (wrolfgar's call) |
+| Course 2 lives on a branch of the course repo (`duckdb-lakehouse`) | the repo | Priority 8: **done 2026-11-03.** Course 2 is [pugwala/lakehouse](https://github.com/pugwala/lakehouse); course 1 is its submodule `course1/`, homelake at the tag `course1-v1.0` |
 
 ## Course 2 topics noted
 
@@ -102,5 +102,5 @@ wrolfgar asked Claude to decide these on 2026-11-02; any of them can be reversed
 - [x] **`02_pipeline`: split at section 5.** Sections 1–4 stay in course 1; incremental loads and schema drift go to course 2. A pipeline that enforces course 1's own rules is the "simple pipeline"; handling the next delivery is operations.
 - [x] **`00_preflight`: trim it** to the checks 01 and 02 need. The job, alert and system-table checks move with 04 and 05.
 - [x] **`extras/`: course 1, as a bonus exercise.** It practises session 4's type conversion on a new file and needs no architecture. This reverses the first call (course 2); say so if you want it back.
-- [x] **Move the course 2 notebooks later**, with Priority 8 (course 2's own repo). Nothing on `main` changes until then: course 1's files stay as they are, and this document is the record.
+- [x] **Move the course 2 notebooks later**, after Priority 8 (course 2's own repo, done 2026-11-03). wrolfgar chose to give the move a step of its own: it changes course 1's files, so it gets its own course 1 tag (`course1-v1.1`), and `handoff/publish.py` and `parity.py` (course 1's side of the handoff) move with it. Nothing on course 1's `main` changes until then: its files stay as they are, and this document is the record.
 - [x] **Automatic tagging goes right before `incident_report`**, as Priority 4b. Free text is where automatic PII detection matters most, and tags set at ingestion should exist before that text arrives.

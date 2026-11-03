@@ -24,7 +24,7 @@ Everything is reached through the VM's Tailscale name from any device on wrolfga
 | SSH to the VM | `ssh lakehouse` (Mac `~/.ssh/config`) | User `claude`, SSH key from the Mac |
 | VM addresses | Tailscale <tailnet-ip> (`<tailnet-host>`); LAN <vm-lan-ip> |  |
 | Proxmox | https://<proxmox-host-ip>:8006, VM 140 |  |
-| Code | GitHub `pugwala/lunch-and-learn-data-cleansing`, branch `duckdb-lakehouse` | Pushes as `pugwala` |
+| Code | GitHub `pugwala/lakehouse` (course 2, `main`; course 1 is the submodule `course1/` = `pugwala/homelake` at `course1-v1.0`). The live stack still runs `pugwala/lunch-and-learn-data-cleansing`, branch `duckdb-lakehouse` | Pushes as `pugwala` |
 | Status snapshot | [Home Lakehouse Handoff](https://claude.ai/artifact/2Ee11DTfMk8kLEoLtR7d3U) |  |
 
 **Read a secret, in your own SSH session (never in chat):**
@@ -47,7 +47,7 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 
 ## Up next
 
-Now: Priorities 1 to 6 and 4b are done: the course 1 / course 2 boundary, automatic tagging, the incident reports (so the approved data model is complete) and chunk 10, the scale-up to L, benchmarked in a scratch lake of its own. So is the find\_by\_tags MCP tool, along with phases 0 to 7, dataset-expansion chunks 0 to 10 and all seven MCP tools. Next in the agreed order (2026-11-02) is chunk 11 (7), then course 2's own repo (8) and the how-to document (9). Each waits for wrolfgar's go-ahead. The other unticked items are housekeeping, done whenever there's room.
+**Now:** Priorities 1 to 6, 4b and 8 are done: the course 1 / course 2 boundary, automatic tagging, the incident reports (so the approved data model is complete), chunk 10 (the scale-up to L, benchmarked in a scratch lake of its own) and course 2's own repo, `pugwala/lakehouse`, with course 1 as a pinned submodule. So is the find\_by\_tags MCP tool, along with phases 0 to 7, dataset-expansion chunks 0 to 10 and all seven MCP tools. Next: moving the live stack onto the new repo, then the course 2 notebooks out of course 1, chunk 11 (7) and the how-to document (9). Each waits for wrolfgar's go-ahead. The other unticked items are housekeeping, done whenever there's room.
 
 - [x] Steps 1 to 5 of the recovery plan (see the entries below), the Handoff doc update, and the `core-plus-dagster` snapshot
 - [x] Passwordless sudo: kept permanently by wrolfgar's decision
@@ -114,14 +114,43 @@ Now: Priorities 1 to 6 and 4b are done: the course 1 / course 2 boundary, automa
 - [ ] Remove the leftover Fuseki scratch graph urn:test:8f395fd7-…
 - [ ] Architecture drawing in the Lakehouse Plan: on hold (wrolfgar, 2026-10-31)
 - [ ] Student handout PDF on homelake
-- [ ] Update the outdated 'no push runs' comment in the CI workflow
+- [x] Update the outdated 'no push runs' comment in the CI workflow
 - [ ] dashboards.py --check: retry on Superset's 429 rate limit (it failed once right after an acceptance run, 2026-11-02)
 - [x] Docs snapshots in homelake/docs: committed and pushed 2026-11-03 as homelake 319a0b2 (wrolfgar's permission). From now on: re-export and re-scrub when a doc changes
 - [ ] Clear pre-scrub session records (show wrolfgar the list first)
 - [ ] Ontology guide: rerun recipes 1 to 8, 10, 11 and 13 to 16 against the expanded world (their answers predate it; recipes 9 and 12 were rerun 2026-11-02)
 - [ ] Priority 7: chunk 11, course sessions (optional), on the settled boundary
-- [ ] Priority 8: course 2 in its own repo (wrolfgar's call; homelake could become it), depending on course 1 at a tagged version, so the how-to document's paths and links are final
+- [x] Priority 8: course 2 in its own repo (wrolfgar's call; homelake could become it), depending on course 1 at a tagged version, so the how-to document's paths and links are final
+- [ ] Switch the live stack to a clone of `pugwala/lakehouse` (bootstrap from `~/lakehouse`, every service and check); then retire the old repo's `duckdb-lakehouse` and homelake's
+- [ ] Move the course 2 notebooks (enterprise 02 §5, 03, 04, 05, databricks.yml) out of course 1, trim 00, and move `handoff/publish.py` + `parity.py` to course 1's side; tag `course1-v1.1` and move the pin
 - [ ] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Today the MCP tools are described only in lakehouse/README.md (MCP section) and the server's docstrings.
+
+## 2026-11-03 · Priority 8: course 2's own repo, pugwala/lakehouse
+
+**Result:** course 2 has its own public repo, [pugwala/lakehouse](https://github.com/pugwala/lakehouse), with the lakehouse's history (73 commits). Course 1 is no longer copied in: it is the git submodule `course1/`, pinned at the new tag `course1-v1.0` on homelake's `main` (`9689d7b`). Pushed as `15109e6`. The live stack still runs from the old repo; switching it is its own step.
+
+**Why:** wrolfgar: "Create course 2's own repo, update the docs and push". His answers to four questions: name `pugwala/lakehouse`, public; course 1 = homelake `main`, tagged; the live stack and the notebook move (02 §5, 03, 04, 05 out of course 1) wait for steps of their own; bootstrap checks course 1 out itself.
+
+**What we found:** course 2's code still reached into course 1 at the repo root in six places: `lake.py` imported `lnl.env` for one folder name; `handoff/publish.py` ran `generator/`; `notebook_smoke` globbed `notebooks/`; the Jupyter image copied `requirements.txt` and `wheels/`; Compose, CI and the restore drill set `PYTHONPATH` to the root. homelake's course 1 files are identical to the old repo's `main`.
+
+**What we did:**
+
+- `git clone ~/homelake` (branch `duckdb-lakehouse`) to `~/lakehouse`, then `git filter-repo` keeping `lakehouse/`, `.github/`, `.githooks/`, `tools/`, `docs/` and `.gitignore` (the student handout dropped). The root commit's message, which carried the course's old name, was reworded; every commit is pugwala.
+- `git tag -a course1-v1.0` on homelake `main` (pushed), then `git submodule add https://github.com/pugwala/homelake.git course1` at that tag.
+- `course1_addon.py` names `COURSE1_ROOT`, `COURSE1_TAG` and `notebooks()`; `publish.GENERATOR`, `definitions.NOTEBOOKS`, the Dockerfile, Compose (`PYTHONPATH=/home/jovyan/course:/home/jovyan/course/course1`), `checks.sh`, the restore drill and three tests use them. `lake.py` has its own `data_dir()` and imports nothing from course 1.
+- `bootstrap.sh` step 3 checks course 1 out at its pin (`git submodule update --init course1`) when a clone left it empty or a pull moved it; `--check` only reports.
+- CI checks out the submodule; its outdated "no push runs" comment is gone. The 27 runbook links point at `pugwala/lakehouse/blob/main`. `test_homelake.py` became `test_branding.py` (skips the submodule folder). New root `README.md`. 17 prose mentions of wrolfgar's first name in comments became wrolfgar (the `<owner-user>` ntfy login is a working name and stays).
+- `gh repo create pugwala/lakehouse --public`, `git push -u origin main`.
+
+**Verified:**
+
+- Red first: with course 1 gone from the root, `test_course1_pin.py` couldn't even import `lake.py` ("No module named 'lnl'"); the 4 new bats tests failed until bootstrap changed.
+- Green: `test_course1_pin.py` 4, `acceptance/test_course1_tag.py` 1 (the recorded commit is the tag's; the checkout is clean), bats 69 of 69, `test_course1_addon.py` 10, branding guard and docstrings pass.
+- 16 mutations caught (13 Python, 3 bash). The first mutation run was invalid: both test files were named `test_course1_pin.py`, so pytest errored on every run and every mutant looked caught; the acceptance file was renamed and the run redone, with the clean tree green.
+- `ci/checks.sh` 17 of 17 on the new layout: course 1's handoff, published from the submodule, matches `course1.lock.json` byte for byte. The Jupyter image builds from the new layout (throwaway tag, removed).
+- Leak checks before the push: `tieback_check` clean; no tailnet address or host, LAN address or full name in any tracked file or commit. `tieback-check` passed on GitHub.
+
+**Next:** switch the live stack to a clone of `pugwala/lakehouse` (its own step, on wrolfgar's go), then move the course 2 notebooks out of course 1 (with `handoff/publish.py` and `parity.py`, course 1's side), then chunk 11 and the how-to doc.
 
 ## 2026-11-03 · Chunk 10: the scale-up to L, benchmarked in a scratch lake
 
@@ -151,6 +180,8 @@ Now: Priorities 1 to 6 and 4b are done: the course 1 / course 2 boundary, automa
 **Tests (TDD):** `tests/test_universe_bench.py`, 8 tests, a whole run at S in a temporary folder. Red first (no module), then green. **13 of 13 mutations caught.** The two mutants that would have pointed dbt at the live lake were checked through a unit test only and never run. `checks.sh` 17 of 17 (the bench test runs in CI's sandbox too).
 
 **Caught on the way:** the boundary guard (`test_universe_never_reaches_into_course_1`) failed when the first version seeded from the live lake. Seeding from the handoff fixed it and is stronger: the benchmark never touches the live lake. The benchmarks were rerun with that code, so the committed numbers come from the committed code. Also: the container has no `/usr/bin/time`, hence the /proc measuring; and a stray `git push origin main` in homelake was a no-op (main was already level), then the right branch was pushed.
+
+**Docs and CI (06:53 CST):** the Work Log, Handoff, Plan and ontology guide were re-exported, scrubbed (no tailnet, LAN, name or employer hits; course-boundary.md unchanged) and committed on wrolfgar's ask as homelake `39eaa23`. `lakehouse-ci` and `tieback-check` passed on both repos for the chunk 10 commits.
 
 **Next:** chunk 11 (optional course sessions) on wrolfgar's go-ahead. The ontology guide's recipes 1-8, 10, 11 and 13-16 still show pre-world answers; rerun them with the how-to doc.
 
