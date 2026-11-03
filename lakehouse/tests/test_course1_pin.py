@@ -41,7 +41,7 @@ def test_gitmodules_takes_course_1_from_homelake_at_its_tag():
     modules.read(REPO / ".gitmodules")
     assert modules['submodule "course1"']["path"] == "course1"
     assert modules['submodule "course1"']["url"] == "https://github.com/pugwala/homelake.git"
-    assert addon.COURSE1_TAG == "course1-v1.0"
+    assert addon.COURSE1_TAG == "course1-v1.1"
 
 
 def test_everything_that_runs_course_1_finds_it_in_course1():

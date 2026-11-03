@@ -131,7 +131,7 @@ copy_tree
 REPO=$WORK/repo
 PY=$WORK/venv/bin/python
 check python python_env
-check compile "$PY" -m compileall -q "$REPO/lakehouse" "$REPO/course1/lnl" "$REPO/course1/generator"
+check compile "$PY" -m compileall -q "$REPO/lakehouse" "$REPO/enterprise" "$REPO/course1/lnl" "$REPO/course1/generator"
 check yaml yaml_parses
 check docstrings "$PY" -m pytest -q -p no:cacheprovider "$REPO/lakehouse/acceptance/test_docstrings.py"
 check ontology ontology_parses

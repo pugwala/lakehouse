@@ -14,7 +14,7 @@ tags, and an expanded world of about 16.7 million rows (65.6 million at scale L)
 | Course 1 | Data cleansing: sessions 1 to 7, pandas and PySpark, ending with "Meaning Over Words" | [pugwala/homelake](https://github.com/pugwala/homelake) |
 | Course 2 | The functional architecture around clean data: this repo | pugwala/lakehouse |
 
-Course 2 starts where course 1 ends. Course 1 is the git submodule `course1/`, pinned at the tag `course1-v1.0`.
+Course 2 starts where course 1 ends. Course 1 is the git submodule `course1/`, pinned at the tag `course1-v1.1`.
 Course 1 publishes its cleansed output once, checked against its 19 Facilitator Guide numbers, and course 2 lands
 that pinned, fingerprinted handoff (`lakehouse/handoff/`). Course 2's own code never imports course 1's.
 
@@ -26,6 +26,7 @@ bash ~/lakehouse/lakehouse/scripts/bootstrap.sh
 ## Where to start
 
 - [`lakehouse/README.md`](lakehouse/README.md): what's here, setup, the daily run, every tool, and the test status.
+- [`enterprise/`](enterprise/README.md): the same ideas on an enterprise Databricks workspace. Course 1's track ends with a pipeline and two handed-over deliveries; this one takes it on: the next delivery, governance, a scheduled job that alerts, and monitoring, with its own helpers.
 - [`docs/`](docs/README.md): snapshots of the lab's working documents (the plan, the handoff, the work log, the
   ontology guide and the course boundary).
 - `lakehouse/ci/checks.sh`: every check that needs no secrets and no running stack; GitHub runs it on every push.
