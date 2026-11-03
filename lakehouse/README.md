@@ -1078,8 +1078,8 @@ checks on a GitHub runner in about 2.5 minutes.
 ## Next phases
 
 **Dataset expansion:** chunks 0 to 10 and Priority 5 (incident reports) are done: the approved model is complete and benchmarked at L (in `/lake/scratch/L`; the live lab stays at M). Course 2 has its own repo, `pugwala/lakehouse`
-(Priority 8). Next: moving the live stack onto it, the course 2 notebooks out of course 1, and chunk 11, the
-optional course sessions.
+(Priority 8), and the live lab runs from it since 2026-11-03. Next: the course 2 notebooks out of course 1, and
+chunk 11, the optional course sessions.
 
 Phases 0 to 6 are done: OpenMetadata holds the glossary and the sensitivity tags, the tags drive Cube's masks,
 Fuseki serves the same meaning as SPARQL, and Prometheus, Grafana and Alertmanager watch the platform, the pipeline

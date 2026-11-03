@@ -8,7 +8,7 @@ Everything a new Claude session needs to pick up wrolfgar's home-lab DuckDB lake
 
 ## Status right now
 
-As of 2026-11-03, 13:50 CST. Phases 0 to 6 are built and running; Phase 7 (upgrades) waits on DuckDB 2.0.1. Phase 8, the expanded world the original plan didn't have, is complete and benchmarked: about 16.7M rows at scale M in the live lab, five data products in three domains, and L (65.6M rows) built and run end to end in a scratch lake of its own. On 2026-11-02 the course boundary was built. Course 1 is sessions 1 to 7. Course 2, the lakehouse, lands course 1's pinned, checked handoff and runs none of its code. Every table and column is now tagged automatically as data lands, and the MCP server has seven tools. Everything is reached over Tailscale at one name with a trusted certificate. The repo was anonymized on 2026-10-25 and 26 (record key `offender_number`). Since 2026-10-31 the lab has its own repo, `pugwala/homelake`, and since 2026-11-03 course 2 has its own, [pugwala/lakehouse](https://github.com/pugwala/lakehouse), with course 1 as the submodule `course1/` (homelake at the tag `course1-v1.0`). The live stack still runs from the old repo until it's switched. Step-by-step detail is in the [Home Lakehouse Work Log](https://claude.ai/artifact/Pr3cjkiYEo6rnXKb95XuJd).
+As of 2026-11-03, 15:35 CST. Phases 0 to 6 are built and running; Phase 7 (upgrades) waits on DuckDB 2.0.1. Phase 8, the expanded world the original plan didn't have, is complete and benchmarked: about 16.7M rows at scale M in the live lab, five data products in three domains, and L (65.6M rows) built and run end to end in a scratch lake of its own. On 2026-11-02 the course boundary was built. Course 1 is sessions 1 to 7. Course 2, the lakehouse, lands course 1's pinned, checked handoff and runs none of its code. Every table and column is now tagged automatically as data lands, and the MCP server has seven tools. Everything is reached over Tailscale at one name with a trusted certificate. The repo was anonymized on 2026-10-25 and 26 (record key `offender_number`). Since 2026-10-31 the lab has its own repo, `pugwala/homelake`, and since 2026-11-03 course 2 has its own, [pugwala/lakehouse](https://github.com/pugwala/lakehouse), with course 1 as the submodule `course1/` (homelake at the tag `course1-v1.0`). The live stack runs from it since 2026-11-03, 15:20 CST. Step-by-step detail is in the [Home Lakehouse Work Log](https://claude.ai/artifact/Pr3cjkiYEo6rnXKb95XuJd).
 
 **Works, verified on the VM:**
 
@@ -58,7 +58,7 @@ Every step is test-first, logged in the Work Log, and committed only when wrolfg
   - The scale-up to L, benchmarked (chunk 10, 2026-11-03): `python -m lakehouse.universe.bench --scale L` builds a scale and runs it in a scratch DuckLake in `/lake/scratch/<scale>`, never the live lake. L (65.6M rows) builds in 164 s at a 27.6 GB peak, dbt in 44 s, queries under 0.3 s; the build's memory is the limit (`--workers 4` for less).
   - The docs snapshots in `homelake/docs` (2026-11-03), scrubbed for the public repo.
 - **Waiting on wrolfgar:**
-  - The go-ahead for switching the live stack to a clone of `pugwala/lakehouse`, then moving the course 2 notebooks out of course 1, then chunk 11 (the optional course sessions on the world) and the how-to doc.
+  - The go-ahead for moving the course 2 notebooks out of course 1 (tag `course1-v1.1`), then chunk 11 (the optional course sessions on the world) and the how-to doc.
   - A TrueNAS share, and `RESTIC_PASSWORD` kept off the VM (set aside 2026-11-01; backups go to a local folder until then).
 - **Course:** `main` gained `notebooks/clearing-out-the-old.ipynb` and `DATA_VERSION` 6, after the rebuild left stale caches.
 
@@ -98,7 +98,7 @@ Claude Code runs on the VM itself, as user `claude`, so Claude runs commands dir
 | `/lake` layout | `landing`, `data` (DuckLake Parquet), `notebook-runs`, `catalog-backups`, `models`, `dagster` (owned 1000:100) |
 | Linux user | `claude`, uid **1001**, SSH key from wrolfgar's Mac, in the `docker` group, passwordless sudo. Both stay permanently (wrolfgar's decision); use them carefully |
 | Container user | `jovyan`, uid **1000**. The repo has ACLs granting 1000 and 1001 rwX (`setfacl`, plus defaults) |
-| Repo on VM | Live stack: `~/lunch-and-learn-data-cleansing`, branch `duckdb-lakehouse` (until it's switched). Course 2's repo: `~/lakehouse` (`pugwala/lakehouse`, `main`, course 1 in `course1/`). `.env` in `lakehouse/` (mode 600, never committed) |
+| Repo on VM | `~/lakehouse` (`pugwala/lakehouse`, `main`, course 1 in `course1/`), since 2026-11-03. `.env` in `lakehouse/` (mode 600, never committed). The old `~/lunch-and-learn-data-cleansing` (branch `duckdb-lakehouse`, frozen) is kept as it was |
 | wrolfgar's Mac | Apple Silicon, on the tailnet. Opens <tailnet-host> and `/dagster/` with a real certificate (no hosts entries, no warnings). `ssh lakehouse` via `~/.ssh/config` (<tailnet-ip>, user `claude`) |
 | Exposure | LAN and wrolfgar's tailnet (VM at <tailnet-ip>, `<tailnet-host>`). Caddy on 80/443 serves only the Tailscale name; the `*.lake.home.arpa` names were retired 2026-10-25. Postgres bound to 127.0.0.1; Cube on the Docker network only; nothing port-forwarded |
 
@@ -106,7 +106,7 @@ Tools on the VM: `gh` (signed in as `pugwala`, used for pushes), `bats`, `shellc
 
 ## Repo and branch
 
-Course 2 lives in its own repo, [pugwala/lakehouse](https://github.com/pugwala/lakehouse) (`main`, since 2026-11-03), in a `lakehouse/` folder, with the history it had. Course 1 is the git submodule `course1/`: [pugwala/homelake](https://github.com/pugwala/homelake) at the tag `course1-v1.0`. Clone with `--recurse-submodules`; `bootstrap.sh` checks course 1 out at its pin if a clone or pull left it behind. Until the live stack is switched it still runs from the `duckdb-lakehouse` branch of `pugwala/lunch-and-learn-data-cleansing`, wrolfgar's public course repo, which runs on Databricks.
+Course 2 lives in its own repo, [pugwala/lakehouse](https://github.com/pugwala/lakehouse) (`main`, since 2026-11-03), in a `lakehouse/` folder, with the history it had, and the live stack runs from its clone `~/lakehouse`. Course 1 is the git submodule `course1/`: [pugwala/homelake](https://github.com/pugwala/homelake) at the tag `course1-v1.0`. Clone with `--recurse-submodules`; `bootstrap.sh` checks course 1 out at its pin if a clone or pull left it behind. The old `duckdb-lakehouse` branches (in `pugwala/lunch-and-learn-data-cleansing`, wrolfgar's public course repo, and in homelake) are frozen with a "Moved" notice.
 
 **Hard rule:** never change the course. On the branch, `lnl/`, `notebooks/`, `generator/` and `requirements.txt` must stay byte-identical to `main`; check with `git diff origin/main -- lnl notebooks generator requirements.txt`, which should print nothing. The lakehouse imports from the course, never the other way round. Outside `lakehouse/`, the branch adds only the root `.gitignore`. Nothing in the repo may tie back to wrolfgar's employer (see the standing rules under Working with wrolfgar).
 
@@ -333,7 +333,7 @@ wrolfgar is a public-sector data architect. This lab is self-education. It mirro
 
 ## Links
 
-- Repo: [pugwala/lakehouse](https://github.com/pugwala/lakehouse) (course 2; course 1 in `course1/`). Start with `lakehouse/README.md`. The live stack still runs [pugwala/homelake @ duckdb-lakehouse](https://github.com/pugwala/homelake/tree/duckdb-lakehouse).
+- Repo: [pugwala/lakehouse](https://github.com/pugwala/lakehouse) (course 2; course 1 in `course1/`), cloned at `~/lakehouse`, which the live stack runs from. Start with `lakehouse/README.md`.
 - Plan with architecture diagram: [DuckDB Home Lakehouse Plan](https://claude.ai/artifact/Js8ovfd7HE7BJ5Sj6TS3Sj)
 - [Announcing DuckDB 2.0.0 LTS](https://duckdb.org/2026/10/21/announcing-duckdb-200)
 - [DuckLake FAQ](https://ducklake.select/faq.html) and [release calendar](https://ducklake.select/release_calendar.html)

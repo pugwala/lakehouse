@@ -24,7 +24,7 @@ Everything is reached through the VM's Tailscale name from any device on wrolfga
 | SSH to the VM | `ssh lakehouse` (Mac `~/.ssh/config`) | User `claude`, SSH key from the Mac |
 | VM addresses | Tailscale <tailnet-ip> (`<tailnet-host>`); LAN <vm-lan-ip> |  |
 | Proxmox | https://<proxmox-host-ip>:8006, VM 140 |  |
-| Code | GitHub `pugwala/lakehouse` (course 2, `main`; course 1 is the submodule `course1/` = `pugwala/homelake` at `course1-v1.0`). The live stack still runs `pugwala/lunch-and-learn-data-cleansing`, branch `duckdb-lakehouse` | Pushes as `pugwala` |
+| Code | GitHub `pugwala/lakehouse` (course 2, `main`; course 1 is the submodule `course1/` = `pugwala/homelake` at `course1-v1.0`). The live stack runs from it (since 2026-11-03); the frozen old branch is `pugwala/lunch-and-learn-data-cleansing`, branch `duckdb-lakehouse` | Pushes as `pugwala` |
 | Status snapshot | [Home Lakehouse Handoff](https://claude.ai/artifact/2Ee11DTfMk8kLEoLtR7d3U) |  |
 
 **Read a secret, in your own SSH session (never in chat):**
@@ -47,7 +47,7 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 
 ## Up next
 
-**Now:** Priorities 1 to 6, 4b and 8 are done: the course 1 / course 2 boundary, automatic tagging, the incident reports (so the approved data model is complete), chunk 10 (the scale-up to L, benchmarked in a scratch lake of its own) and course 2's own repo, `pugwala/lakehouse`, with course 1 as a pinned submodule. So is the find\_by\_tags MCP tool, along with phases 0 to 7, dataset-expansion chunks 0 to 10 and all seven MCP tools. Next: moving the live stack onto the new repo, then the course 2 notebooks out of course 1, chunk 11 (7) and the how-to document (9). Each waits for wrolfgar's go-ahead. The other unticked items are housekeeping, done whenever there's room.
+**Now:** Priorities 1 to 6, 4b and 8 are done: the course 1 / course 2 boundary, automatic tagging, the incident reports (so the approved data model is complete), chunk 10 (the scale-up to L, benchmarked in a scratch lake of its own) and course 2's own repo, `pugwala/lakehouse`, with course 1 as a pinned submodule. So is the find\_by\_tags MCP tool, along with phases 0 to 7, dataset-expansion chunks 0 to 10 and all seven MCP tools. The live stack runs from the new repo since 2026-11-03. Next: the course 2 notebooks out of course 1, chunk 11 (7) and the how-to document (9). Each waits for wrolfgar's go-ahead. The other unticked items are housekeeping, done whenever there's room.
 
 - [x] Steps 1 to 5 of the recovery plan (see the entries below), the Handoff doc update, and the `core-plus-dagster` snapshot
 - [x] Passwordless sudo: kept permanently by wrolfgar's decision
@@ -121,9 +121,40 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 - [ ] Ontology guide: rerun recipes 1 to 8, 10, 11 and 13 to 16 against the expanded world (their answers predate it; recipes 9 and 12 were rerun 2026-11-02)
 - [ ] Priority 7: chunk 11, course sessions (optional), on the settled boundary
 - [x] Priority 8: course 2 in its own repo (wrolfgar's call; homelake could become it), depending on course 1 at a tagged version, so the how-to document's paths and links are final
-- [ ] Switch the live stack to a clone of `pugwala/lakehouse` (bootstrap from `~/lakehouse`, every service and check); then retire the old repo's `duckdb-lakehouse` and homelake's
+- [x] Switch the live stack to a clone of `pugwala/lakehouse` (bootstrap from `~/lakehouse`, every service and check); then retire the old repo's `duckdb-lakehouse` and homelake's
 - [ ] Move the course 2 notebooks (enterprise 02 §5, 03, 04, 05, databricks.yml) out of course 1, trim 00, and move `handoff/publish.py` + `parity.py` to course 1's side; tag `course1-v1.1` and move the pin
 - [ ] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Today the MCP tools are described only in lakehouse/README.md (MCP section) and the server's docstrings.
+
+## 2026-11-03 · The live stack now runs from pugwala/lakehouse
+
+**Result:** all 22 services run from `~/lakehouse` (course 2's own repo, course 1 in `course1/`), switched at 15:20 CST. Same data, volumes and URLs. A `daily_lake` run through the daemon succeeded in 173 s, and 360 of 363 live acceptance tests passed (the 3 failures are below). The old `duckdb-lakehouse` branches are frozen, not deleted.
+
+**Why:** wrolfgar: "Switch the live stack onto the new repo".
+
+**What we found (read-only first):**
+
+- The compose project is named `lakehouse` explicitly, so the containers and named volumes carry over unchanged. Nothing outside Docker used the old folder (no cron jobs, no systemd units); it appeared only as bind-mount sources.
+- The only untracked files that mattered were `.env` and dbt's `target/`. Dagster rebuilds a missing manifest, so `target/` stayed behind. Bootstrap re-locks `.env` to owner-only right after granting the container user ACLs on the repo.
+- No Dagster run was in progress (15:13 CST).
+
+**What we did:**
+
+- `cp -p` of `.env` (mode 600, identical, never printed).
+- `bootstrap.sh --check` from `~/lakehouse` as a dry run: only "repo has no ACL for uid 1000" failed, which the real run fixes.
+- `bootstrap.sh`: ACLs granted, image built (cached), every service with a bind mount recreated from the new folder, catalog-pg recreated and Dagster restarted after it, Caddy, Prometheus and Alertmanager reloaded; its in-stack tests 187 passed (183 before: the 4 new pin tests).
+- Six containers without bind mounts (node-exporter, pushgateway, postgres-exporter, cadvisor, opensearch, openmetadata-server) kept the old folder in their Compose labels, so `docker compose ls` named both folders. They were recreated with `up -d --wait --no-deps --force-recreate`; Pushgateway keeps its metrics on a volume, and all 18 groups came back.
+- Both old branches got a "Moved" notice at the top of `lakehouse/README.md`: the old repo `ba15a29`, homelake `de0f246`.
+- The new pin test failed inside the stack, for two reasons: git refuses a repo another uid owns, and running course 1's code leaves `__pycache__/` in `course1/` (homelake has no `.gitignore`). Fixed in `be511e3`: `-c safe.directory=*`, tracked files only, and `ignore = untracked` in `.gitmodules`. A changed tracked file still fails it.
+
+**Verified:**
+
+- `docker compose ls`: one config file, `~/lakehouse/lakehouse/compose.yaml`; no container mounts the old folder; 22 of 22 up and healthy.
+- Dagster: all five schedules load from the new code and are RUNNING; `daily_lake` succeeded.
+- Acceptance 360 of 363. The other 3: the pin test (fixed above, then green), plus the two known stale tests (the RAM threshold and the hard-coded Sept 30 headline: 80,877 now). The runbook test passed against the live Prometheus, whose alerts now link to `pugwala/lakehouse`.
+
+**Note:** Claude Code keeps its memory per project folder. Sessions started in `~/lunch-and-learn-data-cleansing` still find it; a session started in `~/lakehouse` would start with none until it's copied over.
+
+**Next:** move the course 2 notebooks out of course 1 (tag `course1-v1.1`), then chunk 11 and the how-to doc, each on wrolfgar's go.
 
 ## 2026-11-03 · Priority 8: course 2's own repo, pugwala/lakehouse
 
