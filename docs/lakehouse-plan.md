@@ -2,7 +2,7 @@
 
 # DuckDB Home Lakehouse Plan
 
-Updated Nov 2, 2026 · @wrolfgar
+Updated Nov 3, 2026 · @wrolfgar
 
 ## Summary
 
@@ -20,7 +20,7 @@ I confirmed the core path works before writing this. The generator builds 100,00
 
 ## Where it stands (November 2, 2026)
 
-Phases 0 to 6 are built and running, Phase 7 waits on DuckDB 2.0.1, and a Phase 8 the original plan didn't have, the expanded world, is nine chunks in. On November 2 the course 1 / course 2 boundary was built: the lake now lands course 1's frozen, checked output instead of running course 1's code. The phase sections below are the plan as written; this table says what was actually built.
+Phases 0 to 6 are built and running, Phase 7 waits on DuckDB 2.0.1, and a Phase 8 the original plan didn't have, the expanded world, is ten chunks in: the approved model is complete, and on November 3 the scale-up to L was benchmarked in a scratch lake of its own. On November 2 the course 1 / course 2 boundary was built: the lake now lands course 1's frozen, checked output instead of running course 1's code. The phase sections below are the plan as written; this table says what was actually built.
 
 | Phase | Status | As built, where it differs from the plan |
 | --- | --- | --- |
@@ -32,7 +32,7 @@ Phases 0 to 6 are built and running, Phase 7 waits on DuckDB 2.0.1, and a Phase 
 | 5. Semantic and ontology stack | Done | Masks in Cube come from OpenMetadata's Restricted tags (`sync_masks.py`). The glossary and column tags go to Fuseki as RDF, with SPARQL deduction rules and SHACL shapes for the business rules. Since November 2 every table and column is also tagged automatically as data lands (Governance such as CJIS and PII, PIIType, Source, Layer, Refresh) |
 | 6. Monitoring and alerting | Done | Prometheus, Grafana and Alertmanager in the VM's own monitoring profile. Alerts go to a self-hosted ntfy server on the phone, not PagerDuty |
 | 7. Upgrades | Waiting | DuckDB 2.0 waits for 2.0.1; k3s not started |
-| 8. The expanded world | Chunks 0 to 9 done | See Phase 8 below |
+| 8. The expanded world | Chunks 0 to 10 and the incident reports done; L benchmarked in a scratch lake | See Phase 8 below |
 
 Built beyond the plan:
 
@@ -42,7 +42,7 @@ Built beyond the plan:
 - **The MCP agent's seven tools:** `query_metric` (with filters and time ranges), `define_term`, `list_metrics`, `business_rules`, `data_product_info` (a product's promise, contracts, readiness and freshness in one answer), `data_quality` (the course scorecard and the world's flagged values, counts only) and `find_by_tags` (tables and columns by any tags they carry: one, any of many, or all, on tables, columns or both).
 - **pugwala/homelake:** the lab's own copy of the repo, without the course name. Work lands in the course repo's `duckdb-lakehouse` branch and is cherry-picked there.
 - **The course boundary:** course 1 is sessions 1 to 7; course 2 is the lakehouse ([boundary doc](https://claude.ai/artifact/R1688c4LU7fYfwiQGJQDij)). Course 2 starts from course 1's pinned handoff (`lakehouse/handoff/`) and runs none of its code. Course 1's Trust Test, parity gate and notebook smoke are an add-on behind one switch, `LAKEHOUSE_COURSE1`, and CI proves the platform builds with it off.
-- **Automatic tags:** `lakehouse/tagging/` registers each source (`sources.yml`) and holds the column rules (`rules.yml`). Every daily run tags each table and column, follows dbt lineage into gold, and publishes the tags to OpenMetadata. Live: 54 CJIS tables, 26 with personal data, 86 personal columns.
+- **Automatic tags:** `lakehouse/tagging/` registers each source (`sources.yml`) and holds the column rules (`rules.yml`). Every daily run tags each table and column, follows dbt lineage into gold, and publishes the tags to OpenMetadata. Live: 56 CJIS tables, 28 with personal data, 88 personal columns (since November 3 the incident reports' narrative too, found as free text with no rule change).
 
 How the risks below turned out:
 
@@ -230,7 +230,7 @@ Steps:
 
 ## Phase 8: The expanded world (12 chunks, started October 28)
 
-The course's 100,000 records are one flat list. Phase 8 builds the world around them, lakehouse-only, with the course itself unchanged: about 16.6M rows at scale M covering people (today's 86,879 villains plus heroes, secondary heroes and civilians), powers, teams, places, fights with their participants, power uses and damages, charges and court outcomes linked back to today's offender records, and missions. Each chunk stops for your go-ahead.
+The course's 100,000 records are one flat list. Phase 8 builds the world around them, lakehouse-only, with the course itself unchanged: about 16.7M rows at scale M covering people (today's 86,879 villains plus heroes, secondary heroes and civilians), powers, teams, places, fights with their participants, power uses and damages, charges and court outcomes linked back to today's offender records, missions, and free-text incident reports. Each chunk stops for your go-ahead.
 
 | Chunk | What | Status |
 | --- | --- | --- |
@@ -244,10 +244,10 @@ The course's 100,000 records are one flat list. Phase 8 builds the world around 
 | 7 | Lake layers: `world_bronze`, `world_silver` (cleaned, every problem flagged), `world_gold` (contracts enforced), tested against the answer key. In Dagster, `world_refresh` runs on demand and the big facts run monthly by partition from 1996-01 (a full backfill takes about 2 minutes) | Done November 2 |
 | 8 | Glossary, ontology, rules for the new entities | Done November 2: 12 glossary terms with typed relations (a new `occursAt`: Incident occurs at Location), the world's schemas in OpenMetadata with personal and restricted tags, and six new rules (five dbt tests, one SHACL shape) |
 | 9 | Data products, Cube, dashboards, readiness inputs (Field Ops, Insurance, Courts) | Done November 2: Field Incidents and Incident Damage (Field Operations) and Court Outcomes (Justice), served by four Cube views and a Fights, Damage and Courts dashboard, waiting on Field Operations', Insurance's and the Courts liaison's monthly closes, with monthly contracts and honest freshness |
-| 10 | Scale-up (L) and benchmarks | After incident\_report, on wrolfgar's go-ahead |
+| 10 | Scale-up (L) and benchmarks | Done November 3, in a scratch lake of its own (`/lake/scratch/L`; the live lab stays at M). L, 65.6M rows, builds in 164 s at a 27.6 GB peak; dbt takes 44 s with every answer-key and rule test passing; the dashboards' queries stay under 0.3 s. The build's memory is the limit, not the lake |
 | 11 | Course sessions (optional) |  |
 
-Next, before chunk 10: `incident_report`, about 200k free-text fight write-ups for the text-analysis sessions. It's in the approved model but not built yet. The tagger's free-text rule should tag it PIIType.FreeText as it lands.
+Done November 3, before chunk 10: `incident_report`, 200,000 free-text fight write-ups at M for the text-analysis sessions (a hero's field report, a civilian's witness statement or the desk's note of the call). They name people on purpose, and a mention key (`mention_key/incident_report`, 1.9M rows) says where every name, alias, SID, birth date and phone sits in the text, so redaction can be graded on the lake. The tagger tagged the narrative PIIType.FreeText as it landed, with no rule change. That completes the approved model.
 
 ## Gaps vs Databricks and risks
 

@@ -2,11 +2,11 @@
 
 # How to Use the Lakehouse Ontology (Jena Fuseki)
 
-Updated Nov 2, 2026 · @wrolfgar
+Updated Nov 3, 2026 · @wrolfgar
 
 ## What it is
 
-The ontology is a knowledge graph in Apache Jena Fuseki: a few named graphs that say what every lake column means, how the business terms relate, which columns are sensitive, which business rules hold, and which business inputs each data product waits on. You ask it questions in SPARQL. It holds no records, only meaning: 27 glossary terms, 580 columns across 73 lake tables, 23 columns tagged Restricted, 21 tagged Personal and 17 deduced Pseudonymous, 5 data products, 12 business rules and 5 business inputs (as of 2026-11-02, with the expanded world's tables and products and the tagger's two ops tables in).
+The ontology is a knowledge graph in Apache Jena Fuseki: a few named graphs that say what every lake column means, how the business terms relate, which columns are sensitive, which business rules hold, and which business inputs each data product waits on. You ask it questions in SPARQL. It holds no records, only meaning: 28 glossary terms, 598 columns across 75 lake tables, 23 columns tagged Restricted, 23 tagged Personal and 17 deduced Pseudonymous, 5 data products, 12 business rules and 5 business inputs (as of 2026-11-03, with the expanded world's tables and products, its incident reports and the tagger's two ops tables in).
 
 Nobody edits it directly. It is a published copy of what OpenMetadata knows:
 

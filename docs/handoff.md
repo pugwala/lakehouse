@@ -2,13 +2,13 @@
 
 # Home Lakehouse Handoff
 
-Updated Nov 2, 2026 · @wrolfgar
+Updated Nov 3, 2026 · @wrolfgar
 
 Everything a new Claude session needs to pick up wrolfgar's home-lab DuckDB lakehouse: where it stands, how to reach it, what's built, and what not to break.
 
 ## Status right now
 
-As of 2026-11-02, 17:15 CST. Phases 0 to 6 are built and running; Phase 7 (upgrades) waits on DuckDB 2.0.1. Phase 8, the expanded world the original plan didn't have, is nine chunks in (about 16.5M rows at scale M, five data products in three domains). On 2026-11-02 the course boundary was built. Course 1 is sessions 1 to 7. Course 2, the lakehouse, lands course 1's pinned, checked handoff and runs none of its code. Every table and column is now tagged automatically as data lands, and the MCP server has seven tools. Everything is reached over Tailscale at one name with a trusted certificate. The repo was anonymized on 2026-10-25 and 26 (record key `offender_number`). Since 2026-10-31 the lab also has its own repo, `pugwala/homelake`. Step-by-step detail is in the [Home Lakehouse Work Log](https://claude.ai/artifact/Pr3cjkiYEo6rnXKb95XuJd).
+As of 2026-11-03, 06:50 CST. Phases 0 to 6 are built and running; Phase 7 (upgrades) waits on DuckDB 2.0.1. Phase 8, the expanded world the original plan didn't have, is complete and benchmarked: about 16.7M rows at scale M in the live lab, five data products in three domains, and L (65.6M rows) built and run end to end in a scratch lake of its own. On 2026-11-02 the course boundary was built. Course 1 is sessions 1 to 7. Course 2, the lakehouse, lands course 1's pinned, checked handoff and runs none of its code. Every table and column is now tagged automatically as data lands, and the MCP server has seven tools. Everything is reached over Tailscale at one name with a trusted certificate. The repo was anonymized on 2026-10-25 and 26 (record key `offender_number`). Since 2026-10-31 the lab also has its own repo, `pugwala/homelake`. Step-by-step detail is in the [Home Lakehouse Work Log](https://claude.ai/artifact/Pr3cjkiYEo6rnXKb95XuJd).
 
 **Works, verified on the VM:**
 
@@ -48,15 +48,17 @@ Every step is test-first, logged in the Work Log, and committed only when wrolfg
 **Since then (2026-10-26/27):**
 
 - **Pushed through 2026-10-27:** alerts to wrolfgar's iPhone through self-hosted ntfy; business rules in the ontology (rulebook, deductions, SHACL); data readiness per product month; and ops hardening (weekly DuckLake housekeeping, `lakehouse/ci/checks.sh`, a runbook per alert, nightly restic backups with restore drills).
-- **Pushed 2026-10-28 to 11-02:**
+- **Pushed 2026-10-28 to 11-03:**
   - CI live on GitHub (17 checks).
   - The expanded world, chunks 0 to 9: the universe generator, messy CSVs with answer keys, `world_bronze`/`world_silver`/`world_gold` monthly in Dagster, glossary and rules, three more data products.
   - The course boundary (Priorities 1 to 4).
   - Automatic tags (4b).
   - MCP tools `business_rules`, `data_product_info`, `data_quality` and `find_by_tags`.
+  - Incident reports, the world's free text (Priority 5, 2026-11-03): 200,000 at M with a mention key (`mention_key/incident_report`) that says where every name, alias, SID, birth date and phone sits in the text. The approved model is complete.
+  - The scale-up to L, benchmarked (chunk 10, 2026-11-03): `python -m lakehouse.universe.bench --scale L` builds a scale and runs it in a scratch DuckLake in `/lake/scratch/<scale>`, never the live lake. L (65.6M rows) builds in 164 s at a 27.6 GB peak, dbt in 44 s, queries under 0.3 s; the build's memory is the limit (`--workers 4` for less).
+  - The docs snapshots in `homelake/docs` (2026-11-03), scrubbed for the public repo.
 - **Waiting on wrolfgar:**
-  - The go-ahead for Priority 5, `incident_report`.
-  - Permission to commit the docs snapshots to `homelake/docs`.
+  - The go-ahead for chunk 11, the optional course sessions on the world (then course 2's own repo and the how-to doc).
   - A TrueNAS share, and `RESTIC_PASSWORD` kept off the VM (set aside 2026-11-01; backups go to a local folder until then).
 - **Course:** `main` gained `notebooks/clearing-out-the-old.ipynb` and `DATA_VERSION` 6, after the rebuild left stale caches.
 

@@ -2,7 +2,7 @@
 
 # Home Lakehouse Work Log
 
-Updated Nov 2, 2026 · @wrolfgar
+Updated Nov 3, 2026 · @wrolfgar
 
 ## How to use this log
 
@@ -47,7 +47,7 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 
 ## Up next
 
-Now: Priorities 1 to 4 and 4b are done: the course 1 / course 2 boundary and automatic tagging. So is the find\_by\_tags MCP tool, along with phases 0 to 7, dataset-expansion chunks 0 to 9 and all seven MCP tools. Next in the agreed order (2026-11-02) is Priority 5, incident\_report, then chunk 10 (6), chunk 11 (7), course 2's own repo (8) and the how-to document (9). Each waits for wrolfgar's go-ahead. The other unticked items are housekeeping, done whenever there's room.
+Now: Priorities 1 to 6 and 4b are done: the course 1 / course 2 boundary, automatic tagging, the incident reports (so the approved data model is complete) and chunk 10, the scale-up to L, benchmarked in a scratch lake of its own. So is the find\_by\_tags MCP tool, along with phases 0 to 7, dataset-expansion chunks 0 to 10 and all seven MCP tools. Next in the agreed order (2026-11-02) is chunk 11 (7), then course 2's own repo (8) and the how-to document (9). Each waits for wrolfgar's go-ahead. The other unticked items are housekeeping, done whenever there's room.
 
 - [x] Steps 1 to 5 of the recovery plan (see the entries below), the Handoff doc update, and the `core-plus-dagster` snapshot
 - [x] Passwordless sudo: kept permanently by wrolfgar's decision
@@ -107,8 +107,8 @@ Now: Priorities 1 to 4 and 4b are done: the course 1 / course 2 boundary and aut
 - [x] Priority 4: course 1's material as an optional add-on (Trust Test, the parity gate, notebook\_smoke), so course 2's platform stands on its own. Done 2026-11-02 (044f545, homelake 4560ad5). One switch, LAKEHOUSE\_COURSE1 (on by default, or off), and course1\_addon.py lists every piece. dbt builds models/course1/ only while on; cube.js loads cube/course1/ only while on; Superset skips the Trust Test dashboard and Dagster skips the parity check and the notebook job while off; bootstrap skips the model. NotebookSmokeStale now counts only while the add-on is on. checks.sh proves course 2 builds with it off (standalone) and that Cube loads course1/ only while on (cube\_addon). The live lab is on: daily\_lake succeeded and acceptance passed 343, with only the 2 known stale tests failing. Slip: 73ff4a4 went out with only the file renames (a failed git add), so its CI is red; the rest followed in 044f545 (CI green). Found along the way: dashboards.py doesn't retry on Superset's 429 rate limit (added to housekeeping).
 - [x] Priority 4b (a course 2 topic wrolfgar raised on 2026-11-02): attach governance tags (CJIS, PII and so on) automatically when a data source is ingested, plus other metadata tags that make searching, parsing and organizing easier for end users. Today each sensitive column is tagged by hand (meta.sensitivity in dbt, pushed to OpenMetadata by om\_sync, and on to Cube masks). Placed right before incident\_report, since free text is where automatic detection matters most. Done 2026-11-02 (6939620, homelake a2ef0e0). In lakehouse/tagging/, sources.yml registers each source (its tables, system, governance such as CJIS, refresh, and whether its rows describe people), and rules.yml holds the column rules (by name, or free text by its values). Tags follow dbt lineage into gold, every table gets its layer, and a personal column makes its table Governance.PII. The daily run's new governance/tags step writes ops.table\_tags and ops.column\_tags; om\_sync publishes them as five classifications (Governance, PIIType, Source, Layer, Refresh) and adds OpenMetadata's own PII.Sensitive. Live: 54 CJIS tables, 26 with personal data, 86 personal columns. It finds all 42 hand-tagged columns, plus the state ID, offender number, gender, the conduct notes and the exceptions' raw values. Search by tag works. Hand-set Sensitivity tags and the Cube masks are unchanged.
 - [x] MCP find\_by\_tags (wrolfgar, 2026-11-02): find lake tables and columns by any tags they carry. Done 2026-11-02 (38d85f7, homelake eb6d2cf). The seventh tool reads every lakehouse table and its tags from OpenMetadata as mcp-reader, so all 48 tags in use work: the tagger's, the hand-set Sensitivity tags, PII.Sensitive and glossary terms. It takes one tag or many, with match any or all, and level table, column or both (column with all means one column carries every tag). Names are forgiving (CJIS, PIIType.\*, any case, spaces or hyphens). With no tags it lists every tag in use; an unknown tag names close matches. 10 acceptance tests, 6 mutations caught. A failed check in my commit chain first stopped the commit and left homelake in an empty cherry-pick (skipped, nothing lost).
-- [ ] Priority 5: incident\_report table (free text): still unbuilt; it completes the approved model before the scale-up
-- [ ] Priority 6: chunk 10, scale-up (L) and benchmarks, measuring the final pipeline (a separate scratch lake recommended) (on wrolfgar's go-ahead)
+- [x] Priority 5: incident\_report table (free text): done 2026-11-03, 997268d, homelake de44bd6; it completes the approved model before the scale-up
+- [x] Priority 6: chunk 10, scale-up (L) and benchmarks, measuring the final pipeline: done 2026-11-03 in a separate scratch lake (/lake/scratch/L), a4f77fd, homelake cf985dc
 - [x] MCP tools data\_product\_info and data\_quality (6896c68; homelake 2ac8828)
 - [ ] Fix two stale live acceptance tests: test\_node\_metrics\_describe\_the\_vm expects under 34 GiB of RAM (the VM has 47), and test\_population\_headline\_matches\_cube hard-codes 81,409 (now 80,877)
 - [ ] Remove the leftover Fuseki scratch graph urn:test:8f395fd7-…
@@ -116,12 +116,96 @@ Now: Priorities 1 to 4 and 4b are done: the course 1 / course 2 boundary and aut
 - [ ] Student handout PDF on homelake
 - [ ] Update the outdated 'no push runs' comment in the CI workflow
 - [ ] dashboards.py --check: retry on Superset's 429 rate limit (it failed once right after an acceptance run, 2026-11-02)
-- [ ] Docs snapshots in homelake/docs: prepared and checked 2026-11-02, uncommitted. Waiting for wrolfgar's permission after mop-up; re-export and re-scrub just before the commit
+- [x] Docs snapshots in homelake/docs: committed and pushed 2026-11-03 as homelake 319a0b2 (wrolfgar's permission). From now on: re-export and re-scrub when a doc changes
 - [ ] Clear pre-scrub session records (show wrolfgar the list first)
 - [ ] Ontology guide: rerun recipes 1 to 8, 10, 11 and 13 to 16 against the expanded world (their answers predate it; recipes 9 and 12 were rerun 2026-11-02)
 - [ ] Priority 7: chunk 11, course sessions (optional), on the settled boundary
 - [ ] Priority 8: course 2 in its own repo (wrolfgar's call; homelake could become it), depending on course 1 at a tagged version, so the how-to document's paths and links are final
 - [ ] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Today the MCP tools are described only in lakehouse/README.md (MCP section) and the server's docstrings.
+
+## 2026-11-03 · Chunk 10: the scale-up to L, benchmarked in a scratch lake
+
+**Ask:** wrolfgar, 2026-11-03: "build the new lake then update and commit the docs". The new lake is the separate scratch lake recommended for chunk 10; the live lab stays at M.
+
+**Result:** the world at L (65.6M rows, four times M) builds, loads and passes every answer-key and rule test, and the dashboards' questions stay under 0.3 s. L lives in `/lake/scratch/L` to try things on. Commit `a4f77fd`, homelake `cf985dc`.
+
+**How (step by step):**
+
+- **The tool:** `universe/bench.py` (`python -m lakehouse.universe.bench --scale L`) builds a scale into a folder of its own and runs it end to end there: the build, a seed, dbt's `world_full` and `world_monthly` runs as Dagster makes them (every month in one run, as a backfill does), then six queries like the dashboards' asks, three times each.
+- **The scratch lake** is a real DuckLake (same Parquet format as the live one), but its catalog is a file in the folder (`catalog.ducklake`) and its data goes to the folder's `data/`. Its two seed tables (`ref.nibrs_offenses`, `silver.hero_offenders`' keys and sentence dates) come from course 1's pinned handoff, like the world's core, so the live lake is never opened.
+- **Measured:** each step is its own process, timed, with the peak memory of its whole process tree from /proc (the build's 10 workers are children, so the kernel's own one-process peak would miss most of it). Report: `bench.json` in the folder.
+- **Safety:** a run clears its folder first, so a folder that is, sits inside, or holds the live data path or the live world is refused. Backups only mount `/lake/data`, so the scratch lakes are not in them. `/lake/scratch` was created owned by the container user (uid 1000), like `/lake/landing`.
+
+**Numbers** (VM: 12 vCPU, 47 GB, whole stack running; the second of two runs, 06:33 to 06:38 CST, within a few percent of the first):
+
+| Step | M (16.7M rows) | L (65.6M rows) |
+| --- | --- | --- |
+| Build (clean tables, mess, keys) | 38 s, peak 9.6 GB | 164 s, peak 27.6 GB |
+| dbt world\_full | 9.9 s, 1.3 GB | 15.0 s, 2.0 GB |
+| dbt world\_monthly (with the answer-key tests) | 13.0 s, 2.9 GB | 29.2 s, 6.3 GB |
+| Slowest query (busiest villains, 24M participations at L) | 0.078 s | 0.261 s |
+| Disk: world / lake Parquet | 1.0 GB / 774 MB | 4.1 GB / 3.1 GB |
+
+**What it says:** L fits this VM; the limit is the build's memory, not the lake. dbt and the queries grow more slowly than the data (2 to 3 times for 4 times the rows). The build's 27.6 GB peak left about 7 GB free beside the stack: each worker keeps its own copy of the fight plan, which grows with the scale. For a bigger scale or a smaller machine, use fewer workers (`--workers 4`). Disk is no concern (7.1 GB for L of 951 GB free).
+
+**Tests (TDD):** `tests/test_universe_bench.py`, 8 tests, a whole run at S in a temporary folder. Red first (no module), then green. **13 of 13 mutations caught.** The two mutants that would have pointed dbt at the live lake were checked through a unit test only and never run. `checks.sh` 17 of 17 (the bench test runs in CI's sandbox too).
+
+**Caught on the way:** the boundary guard (`test_universe_never_reaches_into_course_1`) failed when the first version seeded from the live lake. Seeding from the handoff fixed it and is stronger: the benchmark never touches the live lake. The benchmarks were rerun with that code, so the committed numbers come from the committed code. Also: the container has no `/usr/bin/time`, hence the /proc measuring; and a stray `git push origin main` in homelake was a no-op (main was already level), then the right branch was pushed.
+
+**Next:** chunk 11 (optional course sessions) on wrolfgar's go-ahead. The ontology guide's recipes 1-8, 10, 11 and 13-16 still show pre-world answers; rerun them with the how-to doc.
+
+## 2026-11-03 · Priority 5: incident reports, the world's free text
+
+**Result:** the expanded world has its last approved table. `universe/reports.py` writes 200,000 incident reports at M, each a free-text account of one fight, plus a **mention key** that says exactly where every personal detail sits in the text. Both are live in the lake (`world_bronze` and `world_silver.incident_report`). Commit `997268d`, homelake `de44bd6`; CI green on both.
+
+**Why:** wrolfgar, 2026-11-03: "go 5". It completes the model approved 2026-11-01, before the scale-up (chunk 10). Automatic tagging went first (4b) so the tags would be waiting when the free text arrived.
+
+**What we found:**
+
+- The approved model said only "a free-text account of a fight, \~200k, linked to incident", so the columns were Claude's call: `incident_report_id`, `incident_id`, `author_person_id`, `report_kind`, `filed_at`, `narrative`.
+- About 3% of today's villains have no alias or no full name (gaps from course 1's data), and civilians never have an alias. The text falls back from alias to name to "an unidentified suspect", and a name is only mentioned when both parts exist.
+- The dbt test `world_flags_match_answer_key` reads `answer_key/*/*.parquet` as one glob. A mention key with other columns inside `answer_key/` broke it, so the key got its own folder, `mention_key/incident_report/`.
+- The live M world was built Nov 2 at 01:00, before Priority 2 switched it to course 1's pinned handoff. Rebuilt today from the handoff, all 75 existing files were byte-identical.
+
+**What we did:**
+
+- **Three kinds of report.** A hero's `field report` (148k, third person), a civilian's `witness statement` (32k, first person, signed with their own name and phone), or the desk's `desk report` of the call (18k, no author). Bigger fights are written up more often, one report per fight at most. Each is filed after the fight ends, never after today.
+- **It reads like people write.** Dates and times several ways, 10% in capitals, 15% with typos, 2.5% junk (`SEE ATTACHED`, `TBD`, null).
+- **It names people.** Names, aliases, SIDs, birth dates, heroes' real names, witnesses' phone numbers (fictional 555-01xx only).
+- **The mention key.** 1,893,406 rows at M: report, `start_pos`/`end_pos`, kind, `as_written`, person, and the truth as the person table holds it.
+- **The lake.** The mess leaves the narrative alone, and silver keeps it exactly, so the places hold on the lake. dbt got `wb_`/`ws_incident_report` through `world_spec()`, the three report kinds in the code list, and the exceptions view.
+- **Meaning.** The glossary term Incident Report: about Incident, related to Person. Published to OpenMetadata and Fuseki.
+- **Live.** Rebuilt M beside the live world and compared every fingerprint, then ran `world_refresh` and a 370-month `world_monthly` backfill (all succeeded), the tagger, `om_sync.py` and `om_to_rdf.py`.
+
+**Verified:**
+
+- **Tests first.** `test_universe_reports.py` 13; `test_world_lake.py` adds one; `test_world_meaning.py` gains the term, the tags and the graph. All seen failing first.
+- **Mutations.** 15 of 15 caught after strengthening. The first run let 3 through: a mention shifted by one character (it still matched its own text, so now the words must spell the truth), the filing cap (pulled into `filed_time()` and tested directly), and phones written one way only.
+- **The tagger, with no rule change.** It tagged `narrative` `PIIType.FreeText` by its values. Both tables are now `Governance.PII` and CJIS: 56 CJIS tables, 28 with personal data, 88 personal columns, 44 hand tags (pinned counts moved in `test_tags.py` and `test_mcp_tags.py`).
+- **Live lake.** 200,000 rows in bronze and silver, 0 narratives differ from the clean ones, and 0 of 1,893,406 mentions are off their place.
+- **Suites.** `ci/checks.sh` 17/17. Acceptance 358 passed; only the 2 known stale tests failed. One more failed until `monitoring/data_products` was re-materialized: product freshness had trailed today's world rebuild, exactly as that test intends.
+
+**Next:** chunk 10, the scale-up to L with benchmarks, on wrolfgar's go-ahead. First, his call on a separate scratch lake (recommended) or the live one.
+
+## 2026-11-03 · Docs snapshots committed to homelake
+
+**Result:** the five docs are in homelake as Markdown, scrubbed, in `docs/` with a `README.md` index (who's who and links to the live docs). Commit `319a0b2` on `duckdb-lakehouse`, by `pugwala`, pushed.
+
+**Why:** wrolfgar, 2026-11-03: "commit the docs and go 5" (the permission he said he'd give once we had mopped up).
+
+**What we did:**
+
+- Re-exported all five docs. The Work Log (rev 156), Handoff and ontology guide were newer than yesterday's copies; the Plan (rev 34) and Boundary (rev 10) hadn't changed.
+- Ran `~/docs-snapshot/scrub.py` (private, never committed) with the persona team: wrolfgar the public-sector data architect (stands in for wrolfgar), troglobyte the junior data engineer, pugwala the data analyst who commits.
+- Staged the six files by name and committed them as `pugwala`.
+
+**Verified:**
+
+- 0 tailnet names or addresses, 0 of wrolfgar's name or email, 0 LAN addresses, 0 daily-schedule lines, in the files and in the staged diff.
+- `tools/tieback_check.sh` clean, before the commit and again in the pre-commit hook.
+- `test_homelake.py` 2 of 2 passed with the files staged. Its rule allows the old repo's full name; the 14 mentions left are VM folder paths and the repo's name, which wrolfgar chose to keep (2026-10-31).
+
+**Next:** Priority 5, `incident_report`.
 
 ## 2026-11-02 · Docs snapshots for homelake/docs, prepared (not committed)
 
