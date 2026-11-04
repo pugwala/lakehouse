@@ -22,4 +22,6 @@ Who's who in these docs:
 | [course-boundary.md](course-boundary.md) | Where course 1 (cleansing) ends and course 2 (the lakehouse) begins, and the handoff between them | [Course 1 / Course 2 Boundary](https://claude.ai/artifact/R1688c4LU7fYfwiQGJQDij) |
 
 The Claude Doc links open only for their owner; the Markdown here is the readable copy. Diagrams embedded in
-the docs (the Plan's architecture drawing, the ontology guide's figures) don't export and show as placeholders.
+the docs don't export. The Plan's architecture drawing is committed as a picture,
+[architecture.png](architecture.png) (as built on 2026-11-04), and lakehouse-plan.md shows it; the ontology guide's
+figures still show as placeholders.

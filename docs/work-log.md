@@ -2,7 +2,7 @@
 
 # Home Lakehouse Work Log
 
-Updated Nov 3, 2026 · @wrolfgar
+Updated Nov 4, 2026 · @wrolfgar
 
 ## How to use this log
 
@@ -47,7 +47,7 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 
 ## Up next
 
-**Now:** Priorities 1 to 6, 4b and 8 are done: the course 1 / course 2 boundary, automatic tagging, the incident reports (so the approved data model is complete), chunk 10 (the scale-up to L, benchmarked in a scratch lake of its own) and course 2's own repo, `pugwala/lakehouse`, with course 1 as a pinned submodule. So is the find\_by\_tags MCP tool, along with phases 0 to 7, dataset-expansion chunks 0 to 10 and all seven MCP tools. The live stack runs from the new repo since 2026-11-03. The enterprise track is split too (course1-v1.1), and course 1's side of the VM handoff (publish.py, parity.py) lives in course 1 (course1-v1.2). Next: run both enterprise tracks once on the agency workspace (needs wrolfgar at the workspace), chunk 11 (7) and the how-to document (9). Each waits for wrolfgar's go-ahead. The other unticked items are housekeeping, done whenever there's room.
+**Now:** Priorities 1 to 6, 4b and 8 are done: the course 1 / course 2 boundary, automatic tagging, the incident reports (so the approved data model is complete), chunk 10 (the scale-up to L, benchmarked in a scratch lake of its own) and course 2's own repo, `pugwala/lakehouse`, with course 1 as a pinned submodule. So is the find\_by\_tags MCP tool, along with phases 0 to 7, dataset-expansion chunks 0 to 10 and all seven MCP tools. The live stack runs from the new repo since 2026-11-03. The enterprise track is split too (course1-v1.1), and course 1's side of the VM handoff (publish.py, parity.py) lives in course 1 (course1-v1.2). Next: run both enterprise tracks once on the agency workspace (needs wrolfgar at the workspace), chunk 11 (7) and the how-to document (9). Each waits for wrolfgar's go-ahead. Housekeeping was done 2026-11-04 (5747f25); the scratch lakes were deleted at wrolfgar's OK; the architecture drawing was brought up to date the same day; what's left (TrueNAS) waits for wrolfgar.
 
 - [x] Steps 1 to 5 of the recovery plan (see the entries below), the Handoff doc update, and the `core-plus-dagster` snapshot
 - [x] Passwordless sudo: kept permanently by wrolfgar's decision
@@ -111,11 +111,11 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 - [x] Priority 6: chunk 10, scale-up (L) and benchmarks, measuring the final pipeline: done 2026-11-03 in a separate scratch lake (/lake/scratch/L), a4f77fd, homelake cf985dc
 - [x] MCP tools data\_product\_info and data\_quality (6896c68; homelake 2ac8828)
 - [ ] Fix two stale live acceptance tests: test\_node\_metrics\_describe\_the\_vm expects under 34 GiB of RAM (the VM has 47), and test\_population\_headline\_matches\_cube hard-codes 81,409 (now 80,877)
-- [ ] Remove the leftover Fuseki scratch graph urn:test:8f395fd7-…
-- [ ] Architecture drawing in the Lakehouse Plan: on hold (wrolfgar, 2026-10-31)
+- [x] Remove the leftover Fuseki scratch graph urn:test:8f395fd7-…
+- [x] Architecture drawing in the Lakehouse Plan: brought up to date 2026-11-04 (as built that day), also in the repo as docs/architecture.png
 - [ ] Student handout PDF on homelake
 - [x] Update the outdated 'no push runs' comment in the CI workflow
-- [ ] dashboards.py --check: retry on Superset's 429 rate limit (it failed once right after an acceptance run, 2026-11-02)
+- [x] dashboards.py --check: retry on Superset's 429 rate limit (it failed once right after an acceptance run, 2026-11-02)
 - [x] Docs snapshots in homelake/docs: committed and pushed 2026-11-03 as homelake 319a0b2 (wrolfgar's permission). From now on: re-export and re-scrub when a doc changes
 - [ ] Clear pre-scrub session records (show wrolfgar the list first)
 - [ ] Ontology guide: rerun recipes 1 to 8, 10, 11 and 13 to 16 against the expanded world (their answers predate it; recipes 9 and 12 were rerun 2026-11-02)
@@ -126,6 +126,37 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 - [x] Move `handoff/publish.py` + `parity.py` (course 1's side of the VM handoff) into course 1, and point course 2's bootstrap, Dagster parity check, CI and tests at them; tag `course1-v1.2`
 - [ ] Run both enterprise tracks once on the agency workspace (nothing has run on Databricks yet)
 - [ ] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Today the MCP tools are described only in lakehouse/README.md (MCP section) and the server's docstrings.
+
+## 2026-11-04 · Plan's architecture drawing brought up to date, and committed as a picture
+
+**Result.** The drawing in the DuckDB Home Lakehouse Plan shows the lakehouse as built on November 4 (pub 5). The repo's docs/ has it as architecture.png, so the GitHub copy of the plan shows it instead of a placeholder.
+
+**Why.** wrolfgar: "Update the architecture drawing and commit. I need it later today for discussion." The drawing dated from October 27 and missed that evening's ops pieces, the expanded world and the course split.
+
+**What changed in the drawing.**
+
+- **Title:** "Course 1 hands over checked data; course 2 governs it and serves it through Cube" (it said course code builds silver, which stopped being true with the course boundary).
+- **Left column:** Generator and Course cleansing became one Course 1 handoff box (pinned course1-v1.3, 19 checks pass, fingerprint checked), with arrows to bronze and silver. New: World generator (universe/, monthly, 16.7M rows at M). dbt now builds gold, marts and the world.
+- **DuckLake:** a World layer (world\_bronze to world\_gold, fights to courts), and Ops now holds the table and column tags.
+- **Middle column:** OpenMetadata carries products; new Backups box (nightly, restic, restore drills) with a Backup target beside it (local folder now, TrueNAS on hold); Monitoring adds runbooks. The world's layer feeds Cube too.
+- **Right column:** the MCP agent shows products and tags; Superset has three dashboards.
+- **Band and subtitle:** the Dagster band names the daily steps (load, parity, dbt, tags, catalog, graphs, health) and the world's monthly run and Sunday tidy-up; a second subtitle line says course 2's repo pins course 1 and GitHub CI runs checks.sh on every push.
+
+Every fact was read from the code first (compose services, Dagster jobs and schedules, dbt schemas, the MCP tools, the products' domains). Text ids were kept wherever the words still apply. It validated with no diagnostics, and the screenshot was checked: nothing overlaps or is cut off. The sentence under it and the caption say what's new, that the Databricks tracks aren't drawn, and "as built on November 4".
+
+## 2026-11-04 · Housekeeping: four small fixes (5747f25)
+
+wrolfgar said "Do the housekeeping" at 03:40 CST. Each fix was test first (seen red), then the fix, then deliberate breaks to prove the test catches them.
+
+- **Two out-of-date acceptance tests now read their expected values instead of hard-coding them.** The memory test compares node-exporter with the VM's own /proc/meminfo (the VM grew from 31 to 47 GiB on Oct 28). The headline test asks Cube for the latest month-end instead of expecting the Sept 30 numbers (81,409 people; the latest, Oct 31, is 80,877). 3 of 3 breaks caught.
+- **dashboards.py waits and asks again when Superset says 429 (too busy), and only then.** It waits as long as Superset's Retry-After says, else 1, 2, 4, 8, 16 seconds, five times at most; any other error still fails at once. 4 new tests in lakehouse/tests/test\_superset\_retry.py, no stack needed; 5 of 5 breaks caught; the live --check passes.
+- **The leftover Fuseki test graph is gone, and can't come back.** Its one triple (urn:a urn:b 'c') was the write test's own, from Oct 26: the refusal checks ran before the cleanup's try block, so a write let through while Fuseki's login was being set up stayed behind. The whole test now sits in scratch\_graph(), which drops the graph however the test ends, and a guard test fails on any urn:test: graph left behind (red until the leftover was dropped). Removing the cleanup's finally was caught by both tests.
+- **bootstrap.sh --help works from a relative path.** It read its own file as "$0" after changing into lakehouse/, so `bash lakehouse/scripts/bootstrap.sh --help` from the repo root failed. It now notes its absolute path before the cd. 2 new bats tests (71 in all); 3 of 3 breaks caught.
+- The 'no push runs' CI comment was already right in both new repos: nothing to change. The Lakehouse Plan now names course1-v1.3.
+
+Checks: checks.sh 17 of 17; the full acceptance suite 365 of 365 on the live stack. One slip: the first full run failed the memory test because a break (1024 → 1000) was put back within the same second and kept the file's size, so Python kept its compiled copy of the broken file. Clearing the caches fixed it; after mutation runs, clear the `__pycache__` folders.
+
+**Scratch lakes deleted, 04:05 CST.** wrolfgar: "Delete the scratch list from the size benchmark." Looked first: /lake/scratch/M (1.8 GB) and /L (7.1 GB) each held only chunk 10's own benchmark lake (catalog file, Parquet, the generated world, dbt output, bench.json); no container mounts them and no code needs them to exist (the benchmark numbers are kept in the README and the chunk 10 entry). Deleted both by exact path; /lake went from 14 GB to 5 GB used. The empty /lake/scratch/ stays, owned by the container's user, so universe/bench.py can run again; its 8 tests still pass. Rebuilding L takes about 3 minutes (27.6 GB peak memory).
 
 ## 2026-11-03 · The enterprise notebooks say how to run them when opened locally (course1-v1.3)
 
