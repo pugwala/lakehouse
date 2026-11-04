@@ -14,7 +14,7 @@ tags, and an expanded world of about 16.7 million rows (65.6 million at scale L)
 | Course 1 | Data cleansing: sessions 1 to 7, pandas and PySpark, ending with "Meaning Over Words" | [pugwala/homelake](https://github.com/pugwala/homelake) |
 | Course 2 | The functional architecture around clean data: this repo | pugwala/lakehouse |
 
-Course 2 starts where course 1 ends. Course 1 is the git submodule `course1/`, pinned at the tag `course1-v1.2`.
+Course 2 starts where course 1 ends. Course 1 is the git submodule `course1/`, pinned at the tag `course1-v1.3`.
 Course 1 publishes its cleansed output once, checked against its 19 Facilitator Guide numbers, and course 2 lands
 that pinned, fingerprinted handoff (`lakehouse/handoff/`). Course 2's own code never imports course 1's.
 

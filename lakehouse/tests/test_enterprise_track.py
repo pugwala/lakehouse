@@ -206,3 +206,42 @@ def test_course_2_moves_a_bad_delivery_to_rejected(handed_over):
     helpers.move_to_rejected(n, "batch_002.csv")
     assert not (Path(n["landing"]) / "batch_002.csv").exists()
     assert (Path(n["rejected"]) / "batch_002.csv").is_file()
+
+
+# ---- Opened outside Databricks: say so, and say what to do ---------------------------------------------------------
+def test_course_2_says_how_to_run_it_when_opened_locally(monkeypatch):
+    """Opened in the lab's local Jupyter, course 2's notebooks stop at once with a message that says where you are,
+    how to open the track in Databricks (a Git folder of this repo), that course 1's track comes first, and what runs
+    locally instead."""
+    import helpers
+    monkeypatch.delenv("DATABRICKS_RUNTIME_VERSION", raising=False)
+    monkeypatch.setattr(helpers, "_on_databricks", lambda: False)
+    with pytest.raises(RuntimeError) as err:
+        helpers.prepare(0, "Preflight")
+    msg = str(err.value)
+    for words in ["not Databricks", "local Jupyter", "Git folder", "https://github.com/pugwala/lakehouse.git",
+                  "enterprise/00_preflight", "https://github.com/pugwala/homelake.git", "course 1's notebooks folder"]:
+        assert words in msg, words
+
+
+def test_course_2_knows_databricks_when_it_sees_it(monkeypatch):
+    """The runtime's environment variable is enough to count as Databricks."""
+    import helpers
+    monkeypatch.setenv("DATABRICKS_RUNTIME_VERSION", "17.3")
+    assert helpers._on_databricks()
+    monkeypatch.delenv("DATABRICKS_RUNTIME_VERSION")
+    assert helpers._on_databricks() == Path("/Workspace").is_dir()
+
+
+def test_course_1_says_how_to_run_it_when_opened_locally(monkeypatch):
+    """Course 1's enterprise notebooks do the same, pointing at a Git folder of course 1's own repo and at its
+    session notebooks."""
+    sys.path.insert(0, str(COURSE1))
+    from lnl import enterprise as course1
+    monkeypatch.setattr(course1.env, "IS_DATABRICKS", False)
+    with pytest.raises(RuntimeError) as err:
+        course1.prepare(0, "Preflight")
+    msg = str(err.value)
+    for words in ["not Databricks", "Git folder", "https://github.com/pugwala/homelake.git", "enterprise/00_preflight",
+                  "notebooks/"]:
+        assert words in msg, words

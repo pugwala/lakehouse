@@ -4,7 +4,7 @@ The first four must name the same catalog, schema and volume you used in course 
 on with the pipeline and tables course 1 built there, and lands the deliveries it handed over. Mock data only.
 """
 
-ENTERPRISE_CATALOG = ""            # the catalog course 1 used (ENTERPRISE_CATALOG in course 1's lnl/config.py)
+ENTERPRISE_CATALOG = "sandbox"     # the catalog course 1 used (ENTERPRISE_CATALOG in course 1's lnl/config.py)
 ENTERPRISE_SCHEMA = "lnl_{user}"   # the same schema rule as course 1; {user} becomes your user name
 ENTERPRISE_VOLUME = "landing"      # the same volume as course 1: the landing folder and the handoff live in it
 ENTERPRISE_SERVERLESS = True       # serverless jobs; False runs the job's notebook task on ENTERPRISE_CLUSTER_ID

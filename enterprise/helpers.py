@@ -68,11 +68,24 @@ def track_paths() -> dict:
     return {"fs": fs, "ws": ws}
 
 
+NOT_DATABRICKS = """This is not Databricks (a local Jupyter, or another machine), so course 2's enterprise track stops here.
+It needs an enterprise Databricks workspace with Unity Catalog. To run it there:
+  1. Finish course 1's enterprise track first, in a Git folder of https://github.com/pugwala/homelake.git
+  2. In the workspace: Workspace > Create > Git folder, URL https://github.com/pugwala/lakehouse.git, branch main
+  3. Open enterprise/00_preflight in that Git folder, attach compute (serverless or a cluster), and run it
+Locally, run the session notebooks instead: 01 to 07 in course 1's notebooks folder, and lakehouse/08_from_lake.ipynb."""
+
+
+def _on_databricks() -> bool:
+    """True on a Databricks runtime: its environment variable is set, or the /Workspace folder is there."""
+    return "DATABRICKS_RUNTIME_VERSION" in os.environ or Path("/Workspace").is_dir()
+
+
 def prepare(step: int, title: str) -> dict:
     """Run at the top of every course 2 enterprise notebook: checks this is Databricks and the settings are filled
     in, prints who and where, and returns the names."""
-    if "DATABRICKS_RUNTIME_VERSION" not in os.environ and not Path("/Workspace").is_dir():   # course 1's test too
-        raise RuntimeError("The enterprise track runs on an enterprise Databricks workspace (Unity Catalog).")
+    if not _on_databricks():
+        raise RuntimeError(NOT_DATABRICKS)
     if step > 0 and not settings.ENTERPRISE_CATALOG:
         raise RuntimeError("Set ENTERPRISE_CATALOG in enterprise/settings.py first (the catalog course 1 used). "
                            "00_preflight shows what you can use.")

@@ -624,7 +624,7 @@ the SHACL shapes and dbt's tests pick it up on their own.
 ## Course 1, the pinned submodule
 
 Course 2 has its own repo, `pugwala/lakehouse` (Priority 8, 2026-11-03). Course 1 is not copied into it: it is the
-git submodule `course1/`, which is `pugwala/homelake` at the tag `course1-v1.2` (its `main`: sessions 1 to 7, `lnl`,
+git submodule `course1/`, which is `pugwala/homelake` at the tag `course1-v1.3` (its `main`: sessions 1 to 7, `lnl`,
 the generator, the notebooks, the Facilitator Guide, and the enterprise track up to its pipeline). Only course 1's side of the handoff
 (`course1/lnl/publish.py` and `parity.py`, course 1's own since `course1-v1.2`) and course 1's add-on run that code, and they find it there. Course 2's own
 code, `lake.py` and `universe/` among it, imports none of it.
@@ -1075,6 +1075,7 @@ checks on a GitHub runner in about 2.5 minutes.
 | Scale-up and benchmarks (`universe/bench.py`: a scale end to end in a scratch DuckLake, never the live one): 8 tests in `test_universe_bench.py`, all seen failing first; 13 mutations all caught. Run at M and L: L (65.6M rows) built in 164 s at a 27.6 GB peak, dbt in 44 s with every answer-key test passing, every benchmark query under 0.3 s | On the VM |
 | The enterprise track split at the boundary (`course1-v1.1`): course 1 keeps 00, 01 and 02 sections 1-4 and hands the next deliveries over with a fingerprinted manifest; course 2's `enterprise/` has its own helpers, 00, 02b, 03, 04, 05, the quality task and a job-only bundle. 14 tests in `test_enterprise_track.py` (the handoff run for real on a stand-in volume), all seen failing first; 16 mutations caught. Not run on Databricks | On the VM |
 | Course 1's side of the VM handoff moved into course 1 (`course1-v1.2`): `lnl/publish.py` and `lnl/parity.py`, with no course 2 imports; bootstrap and CI publish with `python -m lnl.publish --out "$(python -m lakehouse.handoff.receive where)"`, and the lake's parity gate runs course 1's checks. 3 new tests in `test_handoff.py`, the rest repointed, all seen failing first; 14 mutations caught; a fresh publish is still byte-identical to the lock | On the VM |
+| Opened outside Databricks, both enterprise tracks now say so and say what to do (`course1-v1.3`): where you are, the Git folder URL to make in the workspace, the notebook to start with, and what runs locally instead. 3 tests in `test_enterprise_track.py`, seen failing first; 7 mutations caught | On the VM |
 | Course 2's own repo with course 1 as the pinned submodule `course1/`: 4 tests in `test_course1_pin.py`, 1 in `acceptance/test_course1_tag.py`, 4 bats tests, all seen failing first; 16 mutations caught. `ci/checks.sh` 17 of 17 on the new layout (course 1's handoff, published from the submodule, matches the lock byte for byte) | On the VM and GitHub |
 
 ## Next phases

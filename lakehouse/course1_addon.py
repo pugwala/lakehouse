@@ -29,7 +29,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 COURSE1_ROOT = REPO / "course1"
-COURSE1_TAG = "course1-v1.2"
+COURSE1_TAG = "course1-v1.3"
 
 SWITCH = "LAKEHOUSE_COURSE1"
 PIECES = {

@@ -6,3 +6,6 @@ __pycache__/
 lakehouse/dbt/target/
 lakehouse/dbt/logs/
 logs/
+
+# Jupyter saves these beside any notebook you open
+.ipynb_checkpoints/
