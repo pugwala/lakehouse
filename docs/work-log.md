@@ -47,7 +47,7 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 
 ## Up next
 
-**Now:** Priorities 1 to 6, 4b and 8 are done: the course 1 / course 2 boundary, automatic tagging, the incident reports (so the approved data model is complete), chunk 10 (the scale-up to L, benchmarked in a scratch lake of its own) and course 2's own repo, `pugwala/lakehouse`, with course 1 as a pinned submodule. So is the find\_by\_tags MCP tool, along with phases 0 to 7, dataset-expansion chunks 0 to 10 and all seven MCP tools. The live stack runs from the new repo since 2026-11-03. The enterprise track is split too (course1-v1.1). Next: course 1's side of the VM handoff (publish.py, parity.py) into course 1, chunk 11 (7) and the how-to document (9). Each waits for wrolfgar's go-ahead. The other unticked items are housekeeping, done whenever there's room.
+**Now:** Priorities 1 to 6, 4b and 8 are done: the course 1 / course 2 boundary, automatic tagging, the incident reports (so the approved data model is complete), chunk 10 (the scale-up to L, benchmarked in a scratch lake of its own) and course 2's own repo, `pugwala/lakehouse`, with course 1 as a pinned submodule. So is the find\_by\_tags MCP tool, along with phases 0 to 7, dataset-expansion chunks 0 to 10 and all seven MCP tools. The live stack runs from the new repo since 2026-11-03. The enterprise track is split too (course1-v1.1), and course 1's side of the VM handoff (publish.py, parity.py) lives in course 1 (course1-v1.2). Next: run both enterprise tracks once on the agency workspace (needs wrolfgar at the workspace), chunk 11 (7) and the how-to document (9). Each waits for wrolfgar's go-ahead. The other unticked items are housekeeping, done whenever there's room.
 
 - [x] Steps 1 to 5 of the recovery plan (see the entries below), the Handoff doc update, and the `core-plus-dagster` snapshot
 - [x] Passwordless sudo: kept permanently by wrolfgar's decision
@@ -123,9 +123,42 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 - [x] Priority 8: course 2 in its own repo (wrolfgar's call; homelake could become it), depending on course 1 at a tagged version, so the how-to document's paths and links are final
 - [x] Switch the live stack to a clone of `pugwala/lakehouse` (bootstrap from `~/lakehouse`, every service and check); then retire the old repo's `duckdb-lakehouse` and homelake's
 - [x] Move the course 2 notebooks (enterprise 02 §5, 03, 04, 05, databricks.yml) out of course 1, trim 00, and move `handoff/publish.py` + `parity.py` to course 1's side; tag `course1-v1.1` and move the pin
-- [ ] Move `handoff/publish.py` + `parity.py` (course 1's side of the VM handoff) into course 1, and point course 2's bootstrap, Dagster parity check, CI and tests at them; tag `course1-v1.2`
+- [x] Move `handoff/publish.py` + `parity.py` (course 1's side of the VM handoff) into course 1, and point course 2's bootstrap, Dagster parity check, CI and tests at them; tag `course1-v1.2`
 - [ ] Run both enterprise tracks once on the agency workspace (nothing has run on Databricks yet)
 - [ ] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Today the MCP tools are described only in lakehouse/README.md (MCP section) and the server's docstrings.
+
+## 2026-11-03 · The enterprise notebooks say how to run them when opened locally (course1-v1.3)
+
+**Result:** opened outside Databricks, both enterprise tracks now say where you are, the Git folder URL to make in the workspace, the notebook to start with, and what runs locally instead. Course 1 `9611e19` (tag `course1-v1.3`), course 2 `86eb841`.
+
+**What we found:** wrolfgar opened course 2's `enterprise/00_preflight` in the lab's local Jupyter and got one line, "The enterprise track runs on an enterprise Databricks workspace (Unity Catalog)." That was the intended stop, but it didn't say what to do. While pushing, homelake's `main` had a new commit of his from GitHub's web editor (`918d778`: `ENTERPRISE_CATALOG = "sandbox"`, `ANALYST_GROUP = "da"`, ready for the office run); my commit went on top of it, nothing forced.
+
+**What we did:**
+
+- Tests first: 3 in `test_enterprise_track.py` (course 2's message names the lakehouse Git URL, course 1's track first, `enterprise/00_preflight` and the local notebooks; course 2 knows Databricks by its runtime variable; course 1's message names the homelake Git URL and its session notebooks). Red, then green.
+- Course 2: `helpers.NOT_DATABRICKS` and `_on_databricks()`. Course 1: `lnl.enterprise.NOT_DATABRICKS`, with the environment's name. An old guard (course 2 code may not contain the path `course1/`) caught my first wording; reworded rather than loosened.
+- Course 2's `settings.py` now names the `sandbox` catalog too (it must match course 1's). `.ipynb_checkpoints/` ignored; wrolfgar's run output in `00_preflight` cleared (only the error output had changed).
+
+**What verified it:** 7 mutations, all caught; 207 tests live plus the tag test; `checks.sh` 17 of 17.
+
+## 2026-11-03 · Course 1's side of the VM handoff moved into course 1 (course1-v1.2)
+
+**Result:** `publish.py` and `parity.py` now live in course 1 as `lnl/publish.py` and `lnl/parity.py` (homelake tag `course1-v1.2`, commit `fd27607`), with no course 2 imports. Course 2 (`f34870b`) keeps only its own side and pins the new tag. A fresh publish is still byte-for-byte the pinned v2.
+
+**What we found:** `publish.py` leaned on course 2's `receive.py` for four things: the fingerprint function, the Parquet reader for the parity check, the manifest's file name and the default folder (`/lake/landing/handoff/course1/<version>`). Course 1 can't know course 2's folders, so that default couldn't move with it.
+
+**What we did:**
+
+- Tests first in course 2: three new ones in `test_handoff.py` (course 1 owns publish and parity and imports nothing from course 2; `receive where` prints the pinned folder; the command line refuses to run without `--out`), and `test_parity.py`, `test_lake_load.py`, `test_course1_pin.py` and the bootstrap bats tests repointed. Red: `cannot import name 'parity' from 'lnl'`.
+- Course 1: `lnl/publish.py` gets its own `sha256` and `connect` (a view per table over the Parquet files) and relative imports; `--out` is required. `lnl/parity.py` is the same 19 checks. README: both in the layout, and how they're tested from course 2.
+- Course 2: `publish.py` and `parity.py` deleted; `receive.py` gains `where`; `bootstrap.sh` and `ci/checks.sh` run `python -m lnl.publish --out "$(python -m lakehouse.handoff.receive where)"`; the lake's parity gate (so Dagster's blocking check too) runs course 1's `lnl.parity`. Pin moved to `course1-v1.2`; docstrings, contract.yml and README repointed.
+
+**What verified it:**
+
+- 14 mutations, all caught (one first ran against the wrong test; rerun, it failed three ways: publish refused, the lake's parity gate, the load test).
+- `checks.sh` 17 of 17 (its `load` check lands the fresh publish only if every file matches the lock). 209 tests in the live stack, including the tag test once the pin was committed. `bootstrap.sh --check`: course 1 at its pin, the handoff is the pinned version. CI green on both repos.
+
+**Not done: running the enterprise tracks.** The VM has no Databricks access (no CLI, no credentials), so nothing here can sign in to the agency workspace. The first real run waits for wrolfgar at the workspace.
 
 ## 2026-11-03 · The enterprise track split at the boundary (course1-v1.1)
 
