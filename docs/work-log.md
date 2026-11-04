@@ -127,6 +127,29 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 - [ ] Run both enterprise tracks once on the agency workspace (nothing has run on Databricks yet)
 - [ ] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Today the MCP tools are described only in lakehouse/README.md (MCP section) and the server's docstrings.
 
+## 2026-11-04 · Every doc brought up to date
+
+**Why.** wrolfgar: "make sure all docs are up to date and commit as necessary" (04:45 CST).
+
+**What was stale, and is fixed.** Every figure was read from the VM or the repo first (df, lsblk, nproc, free, the test collectors, the folders).
+
+- **Handoff (rev 160):**
+  - The VM's size: it said 8 vCPU, 32 GB, a 79 GB root and a 200 GB data disk; since the 2026-10-28 resize it is 12 vCPU, 47 GiB, a 148 GB root and a 1 TB /lake.
+  - The health-check commands pointed at the old \~/lunch-and-learn-data-cleansing clone; they now run from \~/lakehouse, where the live stack is.
+  - The test counts were October's; today's are checks.sh 17, lakehouse/tests 211, acceptance 365, bats 71.
+  - The repo pin said course1-v1.0, and a "Hard rule" described the frozen branch; it now gives the course 1 / course 2 rule.
+  - "What's built" and the decisions said silver comes from the course's pandas code; since 2026-11-02 it comes from course 1's handoff.
+  - The parity checks are 19, not 18.
+  - The layout table had two MCP tools and a 14-term glossary; it now has seven tools, 28 terms and ten new rows (handoff/, products/, readiness/, tagging/, universe/, ontology/, runbooks/, ci/, housekeeping.py, course1\_addon.py).
+  - The phase tracker gained Phase 8, and Phase 6 and 7 show their real state.
+  - Two answered open questions are ticked (the VM's size; alerts by ntfy).
+  - A "Now" paragraph opens Next steps, and "Not done yet" lists the enterprise run, chunk 11, the how-to doc and TrueNAS.
+- **Plan:** the chunk 10 row and "Where it stands" (now November 4) no longer say the L scratch lake stays.
+- **Boundary:** the repo row gave course1-v1.0 as the pin; it now says course1-v1.3.
+- **lakehouse/README.md:** two places said L stays in /lake/scratch/L.
+
+**Left as it is, on purpose.** The ontology guide's recipes 1 to 8, 10, 11 and 13 to 16 still show answers from before the expanded world; rerunning them is part of the how-to document, which waits for wrolfgar's go.
+
 ## 2026-11-04 · The architecture gets a version: v3.2
 
 **Result.** The architecture has a dated version, the same everywhere: **v3.2, as of 2026-11-03** (drawn 2026-11-04). It is in the drawing's corner, the Plan's caption and its "Architecture versions" table, the repo's docs/architecture.png and lakehouse-plan.md, both READMEs, this log and the Handoff, and on the git tag `arch-v3.2` in pugwala/lakehouse.

@@ -18,7 +18,7 @@ Decisions baked into this plan:
 
 I confirmed the core path works before writing this. The generator builds 100,000 rows in 10 seconds, `clean_through(4)` runs in about 4 seconds, and the result lands in DuckDB with correct BIGINT, DATE, TIME, DECIMAL(12,2) and BOOLEAN types. The DuckLake extension itself couldn't be downloaded from my sandbox, so its first run on your box is the first test of that piece.
 
-## Where it stands (November 2, 2026)
+## Where it stands (November 4, 2026)
 
 Phases 0 to 6 are built and running, Phase 7 waits on DuckDB 2.0.1, and a Phase 8 the original plan didn't have, the expanded world, is ten chunks in: the approved model is complete, and on November 3 the scale-up to L was benchmarked in a scratch lake of its own. On November 2 the course 1 / course 2 boundary was built: the lake now lands course 1's frozen, checked output instead of running course 1's code. The phase sections below are the plan as written; this table says what was actually built.
 
@@ -271,7 +271,7 @@ The course's 100,000 records are one flat list. Phase 8 builds the world around 
 | 7 | Lake layers: `world_bronze`, `world_silver` (cleaned, every problem flagged), `world_gold` (contracts enforced), tested against the answer key. In Dagster, `world_refresh` runs on demand and the big facts run monthly by partition from 1996-01 (a full backfill takes about 2 minutes) | Done November 2 |
 | 8 | Glossary, ontology, rules for the new entities | Done November 2: 12 glossary terms with typed relations (a new `occursAt`: Incident occurs at Location), the world's schemas in OpenMetadata with personal and restricted tags, and six new rules (five dbt tests, one SHACL shape) |
 | 9 | Data products, Cube, dashboards, readiness inputs (Field Ops, Insurance, Courts) | Done November 2: Field Incidents and Incident Damage (Field Operations) and Court Outcomes (Justice), served by four Cube views and a Fights, Damage and Courts dashboard, waiting on Field Operations', Insurance's and the Courts liaison's monthly closes, with monthly contracts and honest freshness |
-| 10 | Scale-up (L) and benchmarks | Done November 3, in a scratch lake of its own (`/lake/scratch/L`; the live lab stays at M). L, 65.6M rows, builds in 164 s at a 27.6 GB peak; dbt takes 44 s with every answer-key and rule test passing; the dashboards' queries stay under 0.3 s. The build's memory is the limit, not the lake |
+| 10 | Scale-up (L) and benchmarks | Done November 3, in a scratch lake of its own (`/lake/scratch/L`, deleted November 4 once the numbers were recorded; the live lab stays at M). L, 65.6M rows, builds in 164 s at a 27.6 GB peak; dbt takes 44 s with every answer-key and rule test passing; the dashboards' queries stay under 0.3 s. The build's memory is the limit, not the lake |
 | 11 | Course sessions (optional) |  |
 
 Done November 3, before chunk 10: `incident_report`, 200,000 free-text fight write-ups at M for the text-analysis sessions (a hero's field report, a civilian's witness statement or the desk's note of the call). They name people on purpose, and a mention key (`mention_key/incident_report`, 1.9M rows) says where every name, alias, SID, birth date and phone sits in the text, so redaction can be graded on the lake. The tagger tagged the narrative PIIType.FreeText as it landed, with no rule change. That completes the approved model.

@@ -8,15 +8,15 @@ Everything a new Claude session needs to pick up wrolfgar's home-lab DuckDB lake
 
 ## Status right now
 
-As of 2026-11-04, 04:00 CST. Phases 0 to 6 are built and running; Phase 7 (upgrades) waits on DuckDB 2.0.1. Phase 8, the expanded world the original plan didn't have, is complete and benchmarked: about 16.7M rows at scale M in the live lab, five data products in three domains, and L (65.6M rows) built and run end to end in a scratch lake of its own. On 2026-11-02 the course boundary was built. Course 1 is sessions 1 to 7. Course 2, the lakehouse, lands course 1's pinned, checked handoff and runs none of its code. Every table and column is now tagged automatically as data lands, and the MCP server has seven tools. Everything is reached over Tailscale at one name with a trusted certificate. The repo was anonymized on 2026-10-25 and 26 (record key `offender_number`). Since 2026-10-31 the lab has its own repo, `pugwala/homelake`, and since 2026-11-03 course 2 has its own, [pugwala/lakehouse](https://github.com/pugwala/lakehouse), with course 1 as the submodule `course1/` (homelake at the tag `course1-v1.0`). The live stack runs from it since 2026-11-03, 15:20 CST, pinned since 16:45 at course1-v1.1, where the Databricks enterprise track is split at the boundary too (course 2 has its own enterprise/ folder and helpers), and since 18:00 at course1-v1.2, where course 1's side of the VM handoff (lnl/publish.py, lnl/parity.py) lives in course 1, and since 2026-11-04 at course1-v1.3, where the enterprise notebooks say how to run them when opened outside Databricks. The housekeeping was done on 2026-11-04 (5747f25): the stale acceptance tests, the Superset 429 retry, the Fuseki test graph and the bootstrap --help path. The architecture is versioned: v3.2, as of 2026-11-03 (the Plan's drawing, its version table, docs/architecture.png and the git tag arch-v3.2 agree). Step-by-step detail is in the [Home Lakehouse Work Log](https://claude.ai/artifact/Pr3cjkiYEo6rnXKb95XuJd).
+As of 2026-11-04, 05:00 CST. Phases 0 to 6 are built and running; Phase 7 (upgrades) waits on DuckDB 2.0.1. Phase 8, the expanded world the original plan didn't have, is complete and benchmarked: about 16.7M rows at scale M in the live lab, five data products in three domains, and L (65.6M rows) built and run end to end in a scratch lake of its own. On 2026-11-02 the course boundary was built. Course 1 is sessions 1 to 7. Course 2, the lakehouse, lands course 1's pinned, checked handoff and runs none of its code. Every table and column is now tagged automatically as data lands, and the MCP server has seven tools. Everything is reached over Tailscale at one name with a trusted certificate. The repo was anonymized on 2026-10-25 and 26 (record key `offender_number`). Since 2026-10-31 the lab has its own repo, `pugwala/homelake`, and since 2026-11-03 course 2 has its own, [pugwala/lakehouse](https://github.com/pugwala/lakehouse), with course 1 as the submodule `course1/` (homelake at the tag `course1-v1.0`). The live stack runs from it since 2026-11-03, 15:20 CST, pinned since 16:45 at course1-v1.1, where the Databricks enterprise track is split at the boundary too (course 2 has its own enterprise/ folder and helpers), and since 18:00 at course1-v1.2, where course 1's side of the VM handoff (lnl/publish.py, lnl/parity.py) lives in course 1, and since 2026-11-04 at course1-v1.3, where the enterprise notebooks say how to run them when opened outside Databricks. The housekeeping was done on 2026-11-04 (5747f25): the stale acceptance tests, the Superset 429 retry, the Fuseki test graph and the bootstrap --help path. The architecture is versioned: v3.2, as of 2026-11-03 (the Plan's drawing, its version table, docs/architecture.png and the git tag arch-v3.2 agree). Step-by-step detail is in the [Home Lakehouse Work Log](https://claude.ai/artifact/Pr3cjkiYEo6rnXKb95XuJd).
 
 **Works, verified on the VM:**
 
 - Proxmox VM 140 (`lakehouse`), Debian 13, LAN IP <vm-lan-ip>, Tailscale <tailnet-ip>. Claude Code runs on the VM as user `claude`, runs commands directly and explains each step.
-- `/lake` is on the 200 GB data disk (ext4, `LABEL=lake`); root is 79 GB.
+- `/lake` is on the 1 TB data disk (ext4, `LABEL=lake`); root is 148 GB (the VM was resized 2026-10-28 to 12 vCPU and 47 GiB RAM).
 - Twenty-two services in the `core` profile: catalog-pg, jupyter, load-lake (one-shot), dagster-webserver, dagster-daemon, cube, superset, mcp, opensearch, om-migrate (one-shot), openmetadata-server, fuseki, prometheus, node-exporter, cadvisor, postgres-exporter, blackbox, pushgateway, catalog-backup, alertmanager, grafana, caddy. All twenty long-running ones are up; nineteen report healthy (Caddy has no healthcheck).
-- The lake was wiped and rebuilt under `offender_number` after the scrub; `daily_lake` run a549b40d is green. The schedule runs it at 05:00 Central.
-- Tests: parity 19, acceptance 59 (daily run 14, Cube 6, Superset 6, %sql 6, notebooks 9, MCP 13, anonymized 5), bootstrap bats 26, tie-back guard bats 5. `bootstrap.sh --check` passes.
+- The lake lands course 1's pinned handoff and builds everything else from it. `daily_lake` runs at 05:00 Central; the expanded world's jobs run on the 1st of each month (04:30 and 05:30 Central).
+- Tests (2026-11-04): `lakehouse/ci/checks.sh` 17 of 17 (GitHub runs it on every push), `lakehouse/tests` 211 (course 1's 19 parity checks among them), acceptance 365 of 365 on the live stack, bootstrap bats 71, tie-back guard bats 5. `bootstrap.sh --check` passes.
 - Tie-back guard: `tools/tieback_check.sh` runs as a pre-commit hook and as a GitHub Action; secret scanning and push protection are on.
 
 **Not done yet:**
@@ -25,12 +25,17 @@ As of 2026-11-04, 04:00 CST. Phases 0 to 6 are built and running; Phase 7 (upgra
 - A recheck of GitHub code search.
 - Clearing the pre-scrub session records (wrolfgar sees the list first).
 - The harmless `grpcio-status` pip warning in the jupyter image.
+- The first run of both enterprise tracks on the agency workspace (wrolfgar, at the office; the VM has no Databricks access).
+- Chunk 11 (the optional course sessions) and the how-to document, each on wrolfgar's go.
+- Off-VM backups to TrueNAS (on hold until wrolfgar raises it).
 
 The full list is the Work Log's "Up next". Settled since the last update: alerts go to self-hosted ntfy, and pushes now start GitHub Actions on their own.
 
 ## Next steps
 
 Every step is test-first, logged in the Work Log, and committed only when wrolfgar asks. Every command says where it runs and as whom.
+
+**Now (2026-11-04).** First, wrolfgar runs both enterprise tracks once on the agency workspace: course 1's `enterprise/00` to `02` from a Git folder of pugwala/homelake, then course 2's `00`, `02b`, `03`, `04` and `05` from a Git folder of pugwala/lakehouse, and pastes back any errors. Then, each on his go: chunk 11 (the optional course sessions) and the how-to document. DuckDB 2.0 waits for 2.0.1. The paragraphs below record the earlier steps.
 
 **Now. Phase 5, semantic + ontology: done 2026-10-26, pushed as 3255c15 on `duckdb-lakehouse`.** OpenMetadata 2.0.5 (with OpenSearch 2.19.6) runs at <tailnet-host> log in as `admin@open-metadata.org` with `OM_ADMIN_PASSWORD` from `.env` (read it in your own SSH session). `openmetadata/om_sync.py` pushes the Lakehouse glossary (typed relations), the Sensitivity tags (Restricted, Personal) and every lake table; the MCP server's `define_term` now reads OpenMetadata as the read-only `mcp-reader`. Cube masks the restricted columns (`***`) for every group but `restricted_reader`, and `cube/sync_masks.py` keeps those masks equal to OpenMetadata's `Sensitivity.Restricted` tags: tag a column in the UI, run `bootstrap.sh` (it restarts Cube when masks change), review `git diff lakehouse/cube/model/`, commit. The two optional extras are built too (next item).
 
@@ -53,7 +58,7 @@ Every step is test-first, logged in the Work Log, and committed only when wrolfg
   - MCP tools `business_rules`, `data_product_info`, `data_quality` and `find_by_tags`.
   - Incident reports, the world's free text (Priority 5, 2026-11-03): 200,000 at M with a mention key (`mention_key/incident_report`) that says where every name, alias, SID, birth date and phone sits in the text. The approved model is complete.
   - The scale-up to L, benchmarked (chunk 10, 2026-11-03): `python -m lakehouse.universe.bench --scale L` builds a scale and runs it in a scratch DuckLake in `/lake/scratch/<scale>`, never the live lake. L (65.6M rows) builds in 164 s at a 27.6 GB peak, dbt in 44 s, queries under 0.3 s; the build's memory is the limit (`--workers 4` for less).
-  - The docs snapshots in `homelake/docs` (2026-11-03), scrubbed for the public repo.
+  - The docs snapshots, scrubbed for the public repo: in `homelake/docs` on 2026-11-03, then in pugwala/lakehouse's `docs/`, with the architecture drawing as `docs/architecture.png` (architecture v3.2) since 2026-11-04.
 - **Waiting on wrolfgar:**
   - wrolfgar at the agency workspace for the first real run of both enterprise tracks (the VM has no Databricks access), then the go-ahead for chunk 11 (the optional course sessions on the world) and the how-to doc.
   - A TrueNAS share, and `RESTIC_PASSWORD` kept off the VM (set aside 2026-11-01; backups go to a local folder until then).
@@ -72,13 +77,13 @@ Before any commit, the pre-commit hook runs `tools/tieback_check.sh`; run it by 
 **4. Check health any time.** On the VM, as `claude`. It changes nothing, takes a few seconds, and lists anything wrong:
 
 ```bash
-bash ~/lunch-and-learn-data-cleansing/lakehouse/scripts/bootstrap.sh --check
+bash ~/lakehouse/lakehouse/scripts/bootstrap.sh --check
 ```
 
 After a `daily_lake` run, the acceptance test confirms the run did its job:
 
 ```bash
-cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core exec -T jupyter pytest -q lakehouse/acceptance
+cd ~/lakehouse/lakehouse && docker compose --profile core exec -T jupyter pytest -q lakehouse/acceptance
 ```
 
 ## Environment and access
@@ -88,11 +93,11 @@ Claude Code runs on the VM itself, as user `claude`, so Claude runs commands dir
 | Item | Value |
 | --- | --- |
 | Proxmox host | `https://<proxmox-host-ip>:8006`; storage pool assumed `local-zfs` (not confirmed) |
-| VM | ID 140, name `lakehouse`, Debian 13 "trixie" genericcloud image, cloud-init, 8 vCPU (`host` type), 32 GB RAM, ballooning off, QEMU guest agent working |
+| VM | ID 140, name `lakehouse`, Debian 13 "trixie" genericcloud image, cloud-init, 12 vCPU (`host` type), 47 GiB RAM (resized 2026-10-28), ballooning off, QEMU guest agent working |
 | VM IP | <vm-lan-ip> static via cloud-init (confirmed on the VM, 2026-10-25) |
-| OS disk | scsi0, 80 GB; root partition grown to 79 GB with `growpart` + `resize2fs`. Stable name `/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi0` |
-| Data disk | scsi1, 200 GB, ext4 on the whole disk, `LABEL=lake`, mounted at `/lake` (fstab, by label, `nofail`). Formatted 2026-10-25: it had never been formatted before. Stable name `/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1` |
-| `/lake` layout | `landing`, `data` (DuckLake Parquet), `notebook-runs`, `catalog-backups`, `models`, `dagster` (owned 1000:100) |
+| OS disk | scsi0, 150 GB since 2026-10-28; root partition grown to 148 GB with `growpart` + `resize2fs`. Stable name `/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi0` |
+| Data disk | scsi1, 1 TB since 2026-10-28 (200 GB at first), ext4 on the whole disk, `LABEL=lake`, mounted at `/lake` (fstab, by label, `nofail`). Formatted 2026-10-25: it had never been formatted before. Stable name `/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1` |
+| `/lake` layout | `landing`, `data` (DuckLake Parquet), `notebook-runs`, `catalog-backups`, `models`, `dagster` (owned 1000:100), one folder per service that keeps state (openmetadata, fuseki, prometheus, grafana, alertmanager, pushgateway, ntfy, offsite-cache), and scratch for benchmark lakes (empty since 2026-11-04) |
 | Linux user | `claude`, uid **1001**, SSH key from wrolfgar's Mac, in the `docker` group, passwordless sudo. Both stay permanently (wrolfgar's decision); use them carefully |
 | Container user | `jovyan`, uid **1000**. The repo has ACLs granting 1000 and 1001 rwX (`setfacl`, plus defaults) |
 | Repo on VM | `~/lakehouse` (`pugwala/lakehouse`, `main`, course 1 in `course1/`), since 2026-11-03. `.env` in `lakehouse/` (mode 600, never committed). The old `~/lunch-and-learn-data-cleansing` (branch `duckdb-lakehouse`, frozen) is kept as it was |
@@ -103,9 +108,9 @@ Tools on the VM: `gh` (signed in as `pugwala`, used for pushes), `bats`, `shellc
 
 ## Repo and branch
 
-Course 2 lives in its own repo, [pugwala/lakehouse](https://github.com/pugwala/lakehouse) (`main`, since 2026-11-03), in a `lakehouse/` folder, with the history it had, and the live stack runs from its clone `~/lakehouse`. Course 1 is the git submodule `course1/`: [pugwala/homelake](https://github.com/pugwala/homelake) at the tag `course1-v1.0`. Clone with `--recurse-submodules`; `bootstrap.sh` checks course 1 out at its pin if a clone or pull left it behind. The old `duckdb-lakehouse` branches (in `pugwala/lunch-and-learn-data-cleansing`, wrolfgar's public course repo, and in homelake) are frozen with a "Moved" notice.
+Course 2 lives in its own repo, [pugwala/lakehouse](https://github.com/pugwala/lakehouse) (`main`, since 2026-11-03), in a `lakehouse/` folder, with the history it had, and the live stack runs from its clone `~/lakehouse`. Course 1 is the git submodule `course1/`: [pugwala/homelake](https://github.com/pugwala/homelake) at the tag `course1-v1.3`. Clone with `--recurse-submodules`; `bootstrap.sh` checks course 1 out at its pin if a clone or pull left it behind. The old `duckdb-lakehouse` branches (in `pugwala/lunch-and-learn-data-cleansing`, wrolfgar's public course repo, and in homelake) are frozen with a "Moved" notice.
 
-**Hard rule:** never change the course. On the branch, `lnl/`, `notebooks/`, `generator/` and `requirements.txt` must stay byte-identical to `main`; check with `git diff origin/main -- lnl notebooks generator requirements.txt`, which should print nothing. The lakehouse imports from the course, never the other way round. Outside `lakehouse/`, the branch adds only the root `.gitignore`. Nothing in the repo may tie back to wrolfgar's employer (see the standing rules under Working with wrolfgar).
+**Hard rule:** course 1 changes only in pugwala/homelake, released as a new tag (`course1-vX.Y`); course 2 then moves its `course1/` pin to that tag and never edits course 1 in place. Course 2's own code never imports course 1's: course 1's code runs here only to publish its handoff, in the parity checks and in the optional course 1 add-on. The old repo's `duckdb-lakehouse` branch is frozen. Nothing in either repo may tie back to wrolfgar's employer (see the standing rules under Working with wrolfgar).
 
 **History.** On 2026-10-26 the repo was rebuilt as fresh history: the old repo, which had the old record-key name in every commit, was deleted, and the new one was renamed into its place, public, with secret scanning and push protection on. Each branch started as one commit: `main` 677eb0e (the course and the tie-back guard) and `duckdb-lakehouse` 54e0f0e (adds `lakehouse/` and `.gitignore`). Commit SHAs in older Work Log entries no longer exist on GitHub. The only copy of the old content is the mirror `~/lnl-backup.git` on the VM, kept at wrolfgar's request; never push it anywhere. Since then, duckdb-lakehouse has 4ff076b (the Trust Test dashboard), a9b8b1e (%sql in Jupyter), 2035849 (Phase 3: notebooks, model staging, notebook\_smoke; renames sql.py to sql\_magic.py), 73197bc (merge of main's c536880, the session 7 few-shot fix), 58d4372 (tests for it), d132983 (the MCP server), 3255c15 (Phase 5: OpenMetadata, Cube masking, the tags-to-masks loop), and the Phase 5 extras one chunk per commit: 24fef43 (daily om\_sync), 173686d (Fuseki), f8a3378 (glossary as RDF), 9735191 (daily Fuseki refresh, docs), then Phase 6 one chunk per commit: 01cf003, 6a33b28, 1685cd7, deb6c03, a4efa3a, fc31d04, 4277db0 (monitoring), then a2bf4ff (Phase 7: every image pinned), 2fe874e (Python packages as of the cutoff), e54794d (docstrings) and d5fdd87 (merge of main's c5ce083, the guard workflow comment). main is at c5ce083.
 
@@ -116,9 +121,9 @@ Layout of `lakehouse/`:
 | `compose.yaml` | `core` profile: catalog-pg, jupyter, load-lake (one-shot), dagster-webserver, dagster-daemon, cube, superset, mcp, opensearch, om-migrate (one-shot), openmetadata-server, fuseki, caddy |
 | `.env.example` | Every setting and secret name |
 | `lake.py`, `load_lake.py` | DuckLake helpers and the loader CLI (prints JSON metrics on its last line) |
-| `tests/test_parity.py` | 18 checks against the Facilitator Guide's numbers; the blocking step in `daily_lake` |
-| `tests/bootstrap.bats` | 51 bats tests for `bootstrap.sh`, run against stub commands so they never touch the live stack |
-| `acceptance/` | 179 checks run by hand (pins 24 more, besides) (`pytest lakehouse/acceptance` in jupyter): monitoring 22, daily run 17, Cube 15, MCP 13, om\_sync 12, glossary RDF 10, notebooks 9, OpenMetadata 8, pipeline metrics 8, alerting 7, Fuseki 7, Superset 6, `%sql` 6, backup 6, anonymized 5, masks 4. Kept out of `tests/` because the parity step runs that whole folder mid-run |
+| `tests/test_parity.py` | The 19 checks against the Facilitator Guide's numbers (course 1's lnl/parity.py); the blocking step in `daily_lake` |
+| `tests/bootstrap.bats` | 71 bats tests for `bootstrap.sh`, run against stub commands so they never touch the live stack |
+| `acceptance/` | 365 tests run by hand (`pytest lakehouse/acceptance` in jupyter), one file per piece; `lakehouse/README.md` gives the count for each. Kept out of `tests/` because the parity step runs that whole folder mid-run |
 | `dbt/` | Gold models, sources, tests, `profiles.yml` with lake (DuckLake) and local (DuckDB file) targets chosen by `DBT_TARGET` |
 | `orchestration/` | `definitions.py` (Dagster assets, jobs, schedule) and `dagster.yaml` (Postgres storage, one run at a time) |
 | `postgres/init/` | `01-roles.sh`, `02-dagster.sh`, `03-superset.sh`, `04-openmetadata.sh`: idempotent roles and databases |
@@ -130,20 +135,30 @@ Layout of `lakehouse/`:
 | `README.md` | Setup, upgrade path, test status |
 | `sql_magic.py` | %load\_ext lakehouse.sql\_magic: jupysql's %sql on the lake, read-only as lake\_ro (lake.attach\_lake\_ro does the attach) |
 | `openmetadata/` | setup\_admin.py (replaces the default admin password, creates the read-only mcp-reader), om\_sync.py (glossary, Sensitivity tags, every lake table; --check compares only) and om\_to\_rdf.py (that meaning as one RDF graph in Fuseki) |
-| `mcp/` | The MCP server (mcp 2.3.0): query\_metric over Cube's REST API, define\_term over OpenMetadata as mcp-reader |
-| `glossary/glossary.yml` | The 14-term glossary with typed relations; om\_sync.py loads it into OpenMetadata, which is what define\_term reads |
+| `mcp/` | The MCP server (mcp 2.3.0) with seven tools: query\_metric, list\_metrics, define\_term, business\_rules, data\_product\_info, data\_quality and find\_by\_tags |
+| `glossary/glossary.yml` | The 28-term glossary with typed relations; om\_sync.py loads it into OpenMetadata, which is what define\_term reads |
 | `fuseki/` | Dockerfile (Apache's Fuseki 6.2.0 release, SHA-512 pinned, GPG-checked), config.ttl (dataset lakehouse; writes need writer), shiro.ini (no users; admin localhost-only), start.sh (password file on a tmpfs) |
 | `monitoring/` | prometheus/ (config, sites.yml probe targets with a placeholder host, fill-targets.sh, start.sh, rules/lakehouse.yml), alertmanager/ (the undecided receiver), blackbox/ (the site module), grafana/ (provisioning, the Home Lakehouse dashboard JSON, set\_home.py) |
 | `backup/backup.sh` | The nightly catalog backup run by catalog-backup: pg\_dump of every app database, read back with pg\_restore --list, manifest, 14 days, textfile metrics |
 | `metrics.py` | push(): Dagster's job outcomes, load numbers and quality pass rates to the Pushgateway; never fails a run |
+| `handoff/` | receive.py, contract.yml and course1.lock.json: lands course 1's pinned, fingerprinted handoff from /lake/landing/handoff/course1/v2 |
+| `products/` | One descriptor per data product (five, in three domains), plus inputs/ and domains/; they drive OpenMetadata, DCAT, the Cube views and the freshness alerts |
+| `readiness/closes.py` | The business units' closes and inputs behind period\_readiness |
+| `tagging/` | tags.py with sources.yml and rules.yml: governance and metadata tags on every table and column as data lands |
+| `universe/` | The expanded world's generator (scales S, M, L) and bench.py, which benchmarks a scale in a scratch lake of its own |
+| `ontology/` | The business rules: SPARQL deductions in rules/, SHACL shapes in shapes.ttl, check\_rules.py |
+| `runbooks/` | One runbook per alert |
+| `ci/checks.sh` | The 17 checks that need no secrets and no running stack; GitHub runs them on every push |
+| `housekeeping.py` | Weekly DuckLake housekeeping (30 days of history), run by lake\_housekeeping |
+| `course1_addon.py` | The one switch, LAKEHOUSE\_COURSE1, for course 1's optional pieces: the Trust Test, the parity gate, notebook\_smoke |
 
-At the repo root, on both branches: `tools/tieback_check.sh` (the guard; its banned list is written with bracketed letters so the file itself stays clean), `tools/tieback_check.bats` (5 tests), `.githooks/pre-commit` (enabled on the VM with `git config core.hooksPath .githooks`) and `.github/workflows/tieback-check.yml`.
+At the repo root: `tools/tieback_check.sh` (the guard; its banned list is written with bracketed letters so the file itself stays clean), `tools/tieback_check.bats` (5 tests), `.githooks/pre-commit` (enabled on the VM with `git config core.hooksPath .githooks`) and `.github/workflows/tieback-check.yml`.
 
 The course's own README says its notebooks were tested locally with pandas 3.0 and PySpark 4.2. Outside Databricks, `lnl/env.py` writes data to `LNL_DATA_DIR` and session 5 saves Parquet instead of Delta, so the notebooks run unmodified in the lakehouse's Jupyter.
 
 ## What's built
 
-The course generator feeds bronze. The course's own pandas cleansing (`clean_through(4)` equivalent) produces silver. dbt builds gold. Dagster runs it daily. Silver reuses the course code on purpose, so the lake and the class always agree on every value.
+Course 1 publishes its cleansed output once as a pinned handoff, checked against the Facilitator Guide's 19 numbers and fingerprinted, and the lake lands it as ref, bronze and silver (since 2026-11-02; before that the lake ran the course's own pandas cleansing). dbt builds gold and the marts; the world generator and dbt build the expanded world (`world_bronze` to `world_gold`); Dagster runs it all. The architecture is v3.2, as of 2026-11-03: see the drawing in the Plan.
 
 **Tables (DuckLake, attached as `lake`):**
 
@@ -162,7 +177,7 @@ The course generator feeds bronze. The course's own pandas cleansing (`clean_thr
 
 **One load = three DuckLake snapshots:** the data, then table comments, then the `ops` row. Comments run outside the data transaction, because one failed statement aborts a whole DuckDB transaction.
 
-**The daily run** (`daily_lake`, 05:00 America/Chicago, schedule on by default) runs `load_lake` → the blocking parity check `matches_course_numbers` (runs the 18 pytest checks) → `dbt build`.
+**The daily run** (`daily_lake`, 05:00 America/Chicago, schedule on by default) runs `load_lake` → the blocking parity check `matches_course_numbers` (runs the 19 parity checks) → `dbt build`.
 
 - If the parity check fails, the run fails and gold isn't rebuilt. Silver has already been written; DuckLake time travel can restore the previous version. Claude tested this deliberately in the sandbox.
 - dbt tests at `error` severity fail the run: keys, the silver-equals-gold row count, accepted values, score ranges.
@@ -182,14 +197,15 @@ The phases match the plan document.
 
 | Phase | Status | Done | Left |
 | --- | --- | --- | --- |
-| 0 Proxmox build | Done | VM, Debian 13, Docker, ACLs; data disk at `/lake`, root 79 GB; snapshot `core-plus-dagster` before Phase 4 and another before the lake rebuild | Nothing |
+| 0 Proxmox build | Done | VM, Debian 13, Docker, ACLs; data disk at `/lake`, resized 2026-10-28 to 12 vCPU, 47 GiB RAM, a 148 GB root and a 1 TB /lake; snapshot `core-plus-dagster` before Phase 4 and another before the lake rebuild | Nothing |
 | 1 Platform services | Done | Twenty services with their own healthchecks; secrets in `.env` (mode 600, hidden from containers); `bootstrap.sh` sets up and checks it all; Tailscale name with a trusted certificate | Nothing |
 | 2 Generator + medallion | Done | Bronze, silver and gold on DuckLake, keyed by `offender_number`; `daily_lake` green (a549b40d); parity and acceptance tests pass | Optional: port the course's 22 Spark-vs-pandas reconciliation metrics |
 | 3 Notebooks | Done | Jupyter at `/jupyter/`; all 7 course notebooks run unmodified, session 7 on the real model staged offline in `/lake/models`; `lakehouse/08_from_lake.ipynb`; weekly `notebook_smoke` job | Nothing |
 | 4 Query layer | Done | Cube over gold, read-only as `lake_ro`; Superset on Cube at `/superset/`; the Trust Test dashboard; %sql in Jupyter, read-only as lake\_ro; MCP server with query\_metric and define\_term; 31 acceptance tests | Nothing (the glossary moved into OpenMetadata in Phase 5) |
 | 5 Semantic + ontology | Done 2026-10-26, pushed as 3255c15 | OpenMetadata 2.0.5 + OpenSearch at `/openmetadata/`, no default credentials left; `om_sync.py` (glossary with typed relations, Sensitivity tags, every lake table), daily in `daily_lake`; `define_term` reads OpenMetadata; Cube masks restricted columns except for `restricted_reader`; `sync_masks.py` makes the masks follow OpenMetadata's tags; Fuseki 6.2.0 at `/fuseki/` with the glossary and column tags as SKOS, refreshed daily | Nothing |
-| 6 Monitoring | Built 2026-10-26, uncommitted | Prometheus 3.15.0, node-exporter, cAdvisor, postgres-exporter, blackbox through Caddy, Pushgateway with Dagster sensors and data-quality metrics, Alertmanager 0.34.1 with 17 rules, Grafana 13.2.3 with the Home Lakehouse dashboard, nightly catalog backup with a restore drill; 43 new acceptance tests (155 in all), 12 new bats (49) | Pick an alert destination (PagerDuty, email or both) and add it to the `undecided` receiver |
-| 7 Upgrades | Not started | DuckDB pinned at 1.5.6 (Cube bundles 1.5.5, the one accepted exception) | DuckDB 2.0 + DuckLake 1.1 after 2.0.1 ships (take a vzdump first; 2.0 files can't be read by older DuckDB); optional k3s |
+| 6 Monitoring | Done 2026-10-26, pushed | Prometheus 3.15.0, node-exporter, cAdvisor, postgres-exporter, blackbox through Caddy, Pushgateway with Dagster sensors and data-quality metrics, Alertmanager 0.34.1 with 17 rules, Grafana 13.2.3 with the Home Lakehouse dashboard, nightly catalog backup with a restore drill; 43 new acceptance tests (155 in all), 12 new bats (49) | Nothing: alerts go to a self-hosted ntfy server on wrolfgar's phone (since 2026-10-27) |
+| 7 Upgrades | Waiting on DuckDB 2.0.1 | Every image and package pinned (a2bf4ff); DuckDB at 1.5.6 (Cube bundles 1.5.5, the one accepted exception) | DuckDB 2.0 + DuckLake 1.1 after 2.0.1 ships (take a vzdump first; 2.0 files can't be read by older DuckDB); optional k3s |
+| 8 Expanded world | Chunks 0 to 10 done 2026-11-03 | About 16.7M rows at M: people, powers, places, fights, damages, charges, court outcomes, missions and incident reports; world\_bronze to world\_gold, monthly in Dagster; three domains, five data products; L (65.6M rows) benchmarked in a scratch lake, deleted 2026-11-04 | Chunk 11, the optional course sessions, on wrolfgar's go |
 
 ## Decisions and why
 
@@ -202,9 +218,9 @@ These were settled with wrolfgar. Don't reopen them without a reason he'd care a
 | One Docker image for Jupyter, the loader and Dagster | DuckDB extension versions must match DuckDB everywhere. One image guarantees it |
 | No MinIO; Parquet on local disk | MinIO's repo was archived April 2026, and community images stopped in October 2025. If S3 semantics are ever wanted, use Garage or SeaweedFS |
 | Docker Compose, not Kubernetes | One node gains nothing from k3s yet. k3s is an optional Phase 7 exercise |
-| Silver comes from the course's own pandas code | The lake and the class must agree on every value. Rewriting the rules in SQL would drift |
+| Silver comes from course 1's pinned handoff (since 2026-11-02) | The lake and the class must agree on every value. Rewriting the rules in SQL would drift, and running course 1's cleansing inside course 2 tied the two courses together; course 1 now publishes once, checked, and course 2 lands it |
 | Exceptions are flagged, never dropped | The course's "flag, don't fix" rule. A quarantine table was in the original plan and was replaced for this reason |
-| Parity tests are the contract | 18 checks pin the lake to the Facilitator Guide. A failure blocks gold |
+| Parity tests are the contract | 19 checks pin the lake to the Facilitator Guide. A failure blocks gold |
 | dbt test severities mirror the course's enterprise track | error = stop (like a Lakeflow expect\_or\_fail), warn = record (like expect) |
 | Cube = semantic layer; OpenMetadata = ontology layer | The same split wrolfgar uses at work: Unity Catalog metric views ↔ Cube; UC governed tags, Domains, Pages ↔ OpenMetadata classifications, domains, glossary. OpenMetadata authors meaning; Cube enforces it (masks) |
 | Cube is the only governed query path | DuckDB/DuckLake have no grants, row filters or masks. Engineering attaches directly; everyone else goes through Cube |
@@ -267,7 +283,7 @@ These were settled with wrolfgar. Don't reopen them without a reason he'd care a
 
 **Not yet proven, likely to bite:**
 
-- OpenMetadata has no DuckDB/DuckLake connector. Plan: `om_sync.py` on the ingestion SDK. The community DuckLake connector is a sketch.
+- OpenMetadata has no DuckDB/DuckLake connector. Solved: `om_sync.py` on the ingestion SDK pushes every lake table daily. The community DuckLake connector is still a sketch.
 - OpenMetadata's reverse-metadata push to Databricks is Collate-only. That matters at work, not in the home lab.
 - `set-dagster-ui-password.sh` passes the password to `caddy hash-password --plaintext`. Fine at home, but it's briefly visible in the process list.
 - GitHub code search hadn't indexed the new repo on 2026-10-26 (a search for `offender_number` found nothing), so an empty search there proves nothing yet. Recheck before relying on it.
@@ -317,12 +333,12 @@ wrolfgar is a public-sector data architect. This lab is self-education. It mirro
 ## Open questions
 
 - [ ] Is the Proxmox storage pool local-zfs?
-- [ ] Proxmox host total cores and RAM: can the VM keep 32 GB once OpenSearch arrives?
+- [x] Proxmox host total cores and RAM: can the VM keep 32 GB once OpenSearch arrives? Answered 2026-10-28: the host had room, and the VM now has 12 vCPU and 47 GiB RAM.
 - [x] Does wrolfgar's existing Prometheus/Grafana run on this Proxmox host or elsewhere? This decides whether phase 6 adds scrape targets or a new stack.
 
   Answered 2026-10-26: a new monitoring stack on this VM (Prometheus, Grafana, Alertmanager, Pushgateway, exporters), in the `core` profile.
 - [x] Should the home-lab MCP server live in this Compose stack? Decided 2026-10-26: yes, as the mcp service, new rather than an older experiment.
-- [ ] PagerDuty for the home lab: a separate free account, or email-only alerts?
+- [x] PagerDuty for the home lab: a separate free account, or email-only alerts? Answered 2026-10-27: neither; a self-hosted ntfy server pushes alerts to the phone.
 
   2026-10-26: decide later. Alertmanager routes to a placeholder receiver until wrolfgar picks; alerts show in Alertmanager and Grafana meanwhile.
 - [x] Pin claude-mem back to 15.0.2? Done 2026-10-26: back on 15.0.2 with marketplace auto-update off (no schema change made it safe)

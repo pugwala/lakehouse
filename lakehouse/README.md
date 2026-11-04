@@ -1005,8 +1005,9 @@ more slowly than the data (DuckDB uses all 12 cores; the dashboards' questions s
 fights and 24M participations), and every answer-key and rule test passes at L as at M. The build grows a little
 faster than the data and its 27.6 GB peak, beside the running stack, left about 7 GB free: each worker keeps its own
 copy of the fight plan, which grows with the scale. Use fewer workers (`--workers 4`) for a bigger scale or a
-smaller machine; disk is no concern (7.1 GB for L, all of it, against 951 GB free). The live lab stays at M; L
-stays in `/lake/scratch/L` to try things on. Tests: `pytest lakehouse/tests/test_universe_bench.py` (8, a whole
+smaller machine; disk is no concern (7.1 GB for L, all of it, against 951 GB free). The live lab stays at M. The
+scratch lakes were deleted on 2026-11-04 once these numbers were recorded; rerun the command above to rebuild one
+(about 3 minutes for L). Tests: `pytest lakehouse/tests/test_universe_bench.py` (8, a whole
 run at S; 13 mutations all caught, the two that would point dbt at the live lake checked by a unit test, never run).
 
 ## Test status
@@ -1080,7 +1081,7 @@ checks on a GitHub runner in about 2.5 minutes.
 
 ## Next phases
 
-**Dataset expansion:** chunks 0 to 10 and Priority 5 (incident reports) are done: the approved model is complete and benchmarked at L (in `/lake/scratch/L`; the live lab stays at M). Course 2 has its own repo, `pugwala/lakehouse`
+**Dataset expansion:** chunks 0 to 10 and Priority 5 (incident reports) are done: the approved model is complete and benchmarked at L (in a scratch lake, deleted 2026-11-04; the live lab stays at M). Course 2 has its own repo, `pugwala/lakehouse`
 (Priority 8), and the live lab runs from it since 2026-11-03. Next: the course 2 notebooks out of course 1, and
 chunk 11, the optional course sessions.
 
