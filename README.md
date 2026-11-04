@@ -23,6 +23,9 @@ git clone --recurse-submodules https://github.com/pugwala/lakehouse.git ~/lakeho
 bash ~/lakehouse/lakehouse/scripts/bootstrap.sh
 ```
 
+**Architecture v15, as of 2026-11-03** ([the drawing](docs/architecture.png), git tag `arch-v15`). One version per
+milestone that changed the architecture; [the Plan](docs/lakehouse-plan.md#architecture-versions) lists them all.
+
 ## Where to start
 
 - [`lakehouse/README.md`](lakehouse/README.md): what's here, setup, the daily run, every tool, and the test status.

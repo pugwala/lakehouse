@@ -52,11 +52,33 @@ How the risks below turned out:
 
 ## Target architecture
 
-![The home lakehouse architecture as built: course 1's checked handoff lands in DuckLake; course 2 governs it and serves it through Cube](architecture.png)
+![Home lakehouse architecture v15, as of 2026-11-03: course 1's checked handoff lands in DuckLake; course 2 governs it and serves it through Cube](architecture.png)
 
-*The drawing as built on November 4, 2026 (`architecture.png`, a picture of the live doc's drawing).*
+*Architecture v15, as of 2026-11-03, drawn 2026-11-04 (`architecture.png`, a picture of the live doc's drawing; git tag `arch-v15`).*
 
-Read left to right. Course 1 hands over its cleansed data once, pinned and checked (the 19 Facilitator Guide numbers, a fingerprint); course 2 lands it and runs none of course 1's code. dbt, the world generator and the business units' closes build the other layers. DuckLake stores it all; automatic tags, OpenMetadata, Fuseki and Cube give it meaning, rules and readiness; people reach it through Cube, the MCP agent (seven tools) and Superset (three dashboards over five data products), only on the tailnet. Only engineering attaches to DuckLake directly, read-only. Monitoring watches every service and rule, with a runbook per alert, and alerts reach your phone. Backups run nightly to a local folder for now (TrueNAS is on hold). The same ideas on an enterprise Databricks workspace are each course's enterprise/ track, not drawn here. As built on November 4, 2026.
+Read left to right. Course 1 hands over its cleansed data once, pinned and checked (the 19 Facilitator Guide numbers, a fingerprint); course 2 lands it and runs none of course 1's code. dbt, the world generator and the business units' closes build the other layers. DuckLake stores it all; automatic tags, OpenMetadata, Fuseki and Cube give it meaning, rules and readiness; people reach it through Cube, the MCP agent (seven tools) and Superset (three dashboards over five data products), only on the tailnet. Only engineering attaches to DuckLake directly, read-only. Monitoring watches every service and rule, with a runbook per alert, and alerts reach your phone. Backups run nightly to a local folder for now (TrueNAS is on hold). The same ideas on an enterprise Databricks workspace are each course's enterprise/ track, not drawn here. This is architecture v15, as of November 3, 2026 (drawn November 4).
+
+### Architecture versions
+
+One version per milestone that changed what the drawing shows: a component, a layer or a path added or removed. Fixes, tests and documents don't count. The version and its date sit in the drawing's corner, in the repo's copy of it (`docs/architecture.png`) and on the git tag `arch-v15` in pugwala/lakehouse, so a discussion can name one version and everyone looks at the same thing. The next change to the drawing makes v16.
+
+| Version | Date | What changed in the architecture |
+| --- | --- | --- |
+| v1 | 2026-10-24 | The plan: the target architecture drawn |
+| v2 | 2026-10-25 | The platform up: one VM with the /lake disk, Docker Compose, DuckLake (Postgres catalog, Parquet), bronze, silver and gold, Dagster daily at 05:00, Caddy on the tailnet |
+| v3 | 2026-10-25 | The query layer: Cube over gold, read-only; Superset on Cube |
+| v4 | 2026-10-26 | The notebooks on the VM, %sql in Jupyter, and the MCP agent |
+| v5 | 2026-10-26 | Meaning: OpenMetadata's tags drive Cube's masks, synced daily; Fuseki with the glossary as RDF |
+| v6 | 2026-10-26 | Monitoring: Prometheus, Grafana and the exporters |
+| v7 | 2026-10-26 | Data products: the person dimension, the custody marts and Cube views, the Custody dashboard |
+| v8 | 2026-10-27 | Alerts to the phone (Alertmanager to ntfy) and business rules in the ontology (rulebook, deductions, SHACL) |
+| v9 | 2026-10-27 | Data readiness: business inputs and the units' closes, readiness by month. The October 27 drawing showed this version |
+| v10 | 2026-10-27 | Ops: nightly catalog dumps and restic backups, weekly lake housekeeping, GitHub CI, a runbook per alert |
+| v11 | 2026-11-02 | The expanded world in the lake: the world generator, world\_bronze to world\_gold, monthly Dagster runs |
+| v12 | 2026-11-02 | The world's meaning and products: three domains, five data products, the Fights, Damage and Courts dashboard |
+| v13 | 2026-11-02 | The course boundary: the lake lands course 1's pinned, checked handoff and runs none of its code; course 1's add-on behind one switch |
+| v14 | 2026-11-02 | Automatic tags on every table and column as data lands, published to OpenMetadata |
+| v15 | 2026-11-03 | Course 2 in its own repo, pugwala/lakehouse, with course 1 as a pinned submodule; the live stack runs from it. Drawn November 4 |
 
 ## Phase 0: Proxmox build (1 session)
 

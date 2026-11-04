@@ -127,6 +127,16 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 - [ ] Run both enterprise tracks once on the agency workspace (nothing has run on Databricks yet)
 - [ ] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Today the MCP tools are described only in lakehouse/README.md (MCP section) and the server's docstrings.
 
+## 2026-11-04 · The architecture gets a version: v15
+
+**Result.** The architecture has a dated version, the same everywhere: **v15, as of 2026-11-03** (drawn 2026-11-04). It is in the drawing's corner, the Plan's caption and its new "Architecture versions" table, the repo's docs/architecture.png and lakehouse-plan.md, the README, this log and the Handoff, and on the git tag `arch-v15` in pugwala/lakehouse.
+
+**Why.** wrolfgar: "We should date and align the architecture version to our progress, so a v15 aligns across everything. Makes it easier to share and discuss." Then: "V15 was for illustration not fact." So the number was counted from the record, not chosen.
+
+**How it was counted.** One version per milestone that changed what the drawing shows (a component, a layer or a path); fixes, tests and documents don't count. Read from this log's dated entries: v1 the plan (Oct 24), v2 the platform (Oct 25), v3 Cube and Superset (Oct 25), v4 notebooks, %sql and the MCP agent (Oct 26), v5 OpenMetadata, masks and Fuseki (Oct 26), v6 monitoring (Oct 26), v7 data products (Oct 26), v8 phone alerts and business rules (Oct 27), v9 readiness (Oct 27, the drawing of that day), v10 ops (Oct 27), v11 the world in the lake (Nov 2), v12 the world's products (Nov 2), v13 the course boundary (Nov 2), v14 automatic tags (Nov 2), v15 course 2's own repo (Nov 3). It lands on 15 by this grouping, the same number as wrolfgar's example by coincidence; the grouping is a judgment (splitting v4 or v8 in two would make it 16), and the table in the Plan is where to change it.
+
+**From now on.** A change to what the drawing shows bumps the version (v16 next): redraw, stamp the corner and the caption, add a row to the Plan's table, re-take docs/architecture.png, tag `arch-vN`.
+
 ## 2026-11-04 · Plan's architecture drawing brought up to date, and committed as a picture
 
 **Result.** The drawing in the DuckDB Home Lakehouse Plan shows the lakehouse as built on November 4 (pub 5). The repo's docs/ has it as architecture.png, so the GitHub copy of the plan shows it instead of a placeholder.
