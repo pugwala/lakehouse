@@ -704,3 +704,19 @@ set_env()       { sed -i "/^$1=/d" "$ENV"; [ $# = 1 ] || echo "$1=$2" >> "$ENV";
   [[ $output == *"behind OpenMetadata"* ]]
   not_called "restart cube"
 }
+
+@test "--help works when the script is started by a relative path, as the README shows" {
+  cd "$REPO"
+  run bash lakehouse/scripts/bootstrap.sh --help </dev/null
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Sets up or repairs the lakehouse"* ]]
+  [[ "$output" == *"--check"* ]]
+  [ ! -s "$FAKE_LOG" ]   # help changes nothing: no docker, no sudo
+}
+
+@test "--help works from inside the scripts folder too" {
+  cd "$REPO/lakehouse/scripts"
+  run bash ./bootstrap.sh -h </dev/null
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Sets up or repairs the lakehouse"* ]]
+}

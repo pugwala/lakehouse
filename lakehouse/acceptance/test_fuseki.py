@@ -10,6 +10,7 @@ variable and is written to a private password file at start, never into the imag
 import os
 import re
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -33,6 +34,17 @@ def update(statement, **kw):
     return requests.post(f"{DATASET}/update", data={"update": statement}, timeout=30, **kw)
 
 
+@contextmanager
+def scratch_graph():
+    """A fresh urn:test: graph name for a test to write to; the graph is dropped however the block ends, so a failed
+    check never leaves test triples in the dataset."""
+    graph = f"urn:test:{uuid.uuid4()}"
+    try:
+        yield graph
+    finally:
+        update(f"DROP SILENT GRAPH <{graph}>", auth=WRITER).raise_for_status()
+
+
 def test_server_is_up_at_the_pinned_version():
     """Fuseki answers its ping under /fuseki and reports 6.2.0 (it sends no Server header; /$/server says)."""
     requests.get(f"{FUSEKI}/$/ping", timeout=30).raise_for_status()
@@ -47,18 +59,16 @@ def test_anyone_can_read_the_dataset():
 
 
 def test_writes_need_the_writer_password():
-    """An update with no login, or the wrong password, is refused; the writer's is accepted and lands."""
-    graph = f"urn:test:{uuid.uuid4()}"
-    insert = f"INSERT DATA {{ GRAPH <{graph}> {{ <urn:a> <urn:b> 'c' }} }}"
-    assert update(insert).status_code == 401
-    assert update(insert, auth=("writer", "not-the-password")).status_code == 401
-    assert update(insert, auth=("user1", "passwd1")).status_code == 401   # the default shiro.ini's sample user
+    """An update with no login, or the wrong password, is refused; the writer's is accepted and lands. The whole test
+    sits in scratch_graph(): if a refusal ever wrongly lets a write through, the graph is still dropped."""
     assert WRITER[1], "FUSEKI_WRITER_PASSWORD isn't in the jupyter container"
-    try:
+    with scratch_graph() as graph:
+        insert = f"INSERT DATA {{ GRAPH <{graph}> {{ <urn:a> <urn:b> 'c' }} }}"
+        assert update(insert).status_code == 401
+        assert update(insert, auth=("writer", "not-the-password")).status_code == 401
+        assert update(insert, auth=("user1", "passwd1")).status_code == 401   # the default shiro.ini's sample user
         update(insert, auth=WRITER).raise_for_status()
         assert ask(f"ASK {{ GRAPH <{graph}> {{ ?s ?p ?o }} }}").json()["boolean"] is True
-    finally:
-        update(f"DROP SILENT GRAPH <{graph}>", auth=WRITER).raise_for_status()
 
 
 def test_admin_endpoints_are_refused_from_the_network():
@@ -94,3 +104,18 @@ def test_password_stays_out_of_the_image_and_repo():
     assert not re.search(r"(?m)^COPY .*passwd", dockerfile), "a password file is baked into the image"
     for f in (LAKEHOUSE / "fuseki").iterdir():
         assert os.environ["FUSEKI_WRITER_PASSWORD"] not in f.read_text(), f.name
+
+
+def test_a_scratch_graph_is_dropped_even_when_a_check_fails():
+    """scratch_graph() drops its graph however the block ends, so a failed check can't leave test triples behind."""
+    with pytest.raises(AssertionError):
+        with scratch_graph() as graph:
+            update(f"INSERT DATA {{ GRAPH <{graph}> {{ <urn:a> <urn:b> 'c' }} }}", auth=WRITER).raise_for_status()
+            assert False, "a check fails after the write landed"
+    assert ask(f"ASK {{ GRAPH <{graph}> {{ ?s ?p ?o }} }}").json()["boolean"] is False
+
+
+def test_no_scratch_graph_is_left_behind():
+    """No urn:test: graph is left in the dataset: tests clean up after themselves."""
+    r = ask("SELECT DISTINCT ?g WHERE { GRAPH ?g { ?s ?p ?o } FILTER(STRSTARTS(STR(?g), 'urn:test:')) }")
+    assert [b["g"]["value"] for b in r.json()["results"]["bindings"]] == []

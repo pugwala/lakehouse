@@ -17,7 +17,7 @@ import requests
 import yaml
 
 from lakehouse import lake
-from test_custody_cube import meta
+from test_custody_cube import cube, meta, rows  # noqa: F401 (cube is a fixture)
 from test_glossary_rdf import ask, select
 
 LAKEHOUSE = Path(__file__).resolve().parents[1]
@@ -207,10 +207,14 @@ def test_each_product_reports_its_coverage():
     assert prom("lakehouse_product_records_total") == {stem: 100_000.0 for stem in snapshot}
 
 
-def test_population_headline_matches_cube():
-    """The pushed headline for the latest month-end is Cube's: 81,409 people in 84,106 open records."""
-    assert prom('lakehouse_product_people_in_custody{product="custody-population"}') == {"custody-population": 81_409.0}
-    assert prom('lakehouse_product_records_in_custody{product="custody-population"}') == {"custody-population": 84_106.0}
+def test_population_headline_matches_cube(cube):
+    """The pushed headline for the latest month-end is Cube's: the same people and open records Cube counts when
+    asked for the latest month-end. Cube is asked, not a number written down, so a new month-end doesn't break it."""
+    [(records, people)] = rows(cube, "SELECT MEASURE(records_in_custody), MEASURE(people_in_custody) "
+                                     "FROM custody_population WHERE is_latest_month_end = true")
+    assert people > 0 and records >= people
+    assert prom('lakehouse_product_people_in_custody{product="custody-population"}') == {"custody-population": float(people)}
+    assert prom('lakehouse_product_records_in_custody{product="custody-population"}') == {"custody-population": float(records)}
 
 
 def test_product_alert_rules_load():

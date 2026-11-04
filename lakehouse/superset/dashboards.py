@@ -15,6 +15,7 @@ dashboard's status table lists its own products, read from their descriptors (la
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 import requests
@@ -22,6 +23,7 @@ import yaml
 
 SUPERSET = os.environ.get("SUPERSET_URL", "http://superset:8088/superset")
 TIMEOUT = 60
+RETRIES = 5                         # waits on "429 Too Many Requests" (Superset allows 50 calls a second)
 
 TRUST_TABLE = "trust_test"          # the Cube cube over gold.trust_test
 TRUST_COLUMNS = ["question_id", "question", "as_loaded", "cleansed", "changed"]
@@ -83,8 +85,13 @@ def login():
 
 
 def call(api, method, path, **kwargs):
-    """One REST call; raises with Superset's own message when it refuses."""
-    r = api.request(method, f"{SUPERSET}/api/v1/{path}", timeout=TIMEOUT, **kwargs)
+    """One REST call; raises with Superset's own message when it refuses. When Superset is only too busy (429), it
+    waits and asks again, up to RETRIES times: as long as Superset's Retry-After says, else 1, 2, 4, 8, 16 seconds."""
+    for attempt in range(RETRIES + 1):
+        r = api.request(method, f"{SUPERSET}/api/v1/{path}", timeout=TIMEOUT, **kwargs)
+        if r.status_code != 429 or attempt == RETRIES:
+            break
+        time.sleep(float(r.headers.get("Retry-After") or 2 ** attempt))
     if not r.ok:
         raise RuntimeError(f"{method} {path}: {r.status_code} {r.text[:300]}")
     return r.json()

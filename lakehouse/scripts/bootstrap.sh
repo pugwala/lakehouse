@@ -8,6 +8,7 @@
 #
 # It never formats a disk. If /lake isn't the mounted data disk it stops and says what to do.
 set -euo pipefail
+SELF=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")   # this script's absolute path, before the cd below moves us
 cd "$(dirname "$0")/.."                      # lakehouse/
 REPO=$(cd .. && pwd)
 
@@ -16,7 +17,7 @@ for arg in "$@"; do
   case $arg in
     --reload) RELOAD=1 ;;
     --check)  CHECK=1 ;;
-    -h|--help) sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,9p' "$SELF" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unknown option: $arg (try --help)" >&2; exit 2 ;;
   esac
 done

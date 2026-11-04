@@ -31,6 +31,12 @@ def query(promql):
     return r.json()["data"]["result"]
 
 
+def vm_memory_bytes():
+    """The VM's memory in bytes, from the kernel's /proc/meminfo (MemTotal is in kB)."""
+    line = next(l for l in Path("/proc/meminfo").read_text().splitlines() if l.startswith("MemTotal:"))
+    return float(line.split()[1]) * 1024
+
+
 def test_prometheus_is_up_at_the_pinned_version():
     """Prometheus is ready under /prometheus and reports 3.15.0."""
     requests.get(f"{PROMETHEUS}/-/ready", timeout=30).raise_for_status()
@@ -47,9 +53,11 @@ def test_every_scrape_target_is_up():
 
 
 def test_node_metrics_describe_the_vm():
-    """node-exporter reads the host, not its container: the VM's memory, and the /lake data disk."""
+    """node-exporter reads the host, not its container: the VM's memory, and the /lake data disk. The expected memory
+    is read, not written down, so resizing the VM doesn't break the test: a container shares the host's kernel, so
+    /proc/meminfo here shows the VM's total too."""
     mem = float(query("node_memory_MemTotal_bytes")[0]["value"][1])
-    assert 28 * 2**30 < mem < 34 * 2**30, mem   # the VM has about 31 GiB
+    assert mem == vm_memory_bytes(), (mem, vm_memory_bytes())
     assert query('node_filesystem_size_bytes{mountpoint="/lake"}'), "no /lake filesystem in node-exporter"
 
 
