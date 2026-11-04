@@ -1,4 +1,5 @@
-"""MCP server for the home-lab lakehouse: governed metrics from Cube, meanings from the glossary, and the rulebook.
+"""MCP server for the home-lab lakehouse: governed metrics, meanings, rules, the catalog, lineage, the jobs, the
+platform's health and the incident reports, all read-only.
 
 Tools
     list_metrics()                                    every metric query_metric offers: its view, data product,
@@ -27,6 +28,19 @@ Tools
                                                       them (governance, personal data, source, layer, refresh,
                                                       sensitivity, glossary terms): one tag, any of several, or all
                                                       of them; with no tags, every tag in use and how often
+    describe_table(table)                             one lake table: layer, description, tags, its columns in order
+                                                      (type, description, tags, glossary terms, restricted, personal),
+                                                      the products that deliver it, its contract, the views reading it
+    lineage(name)                                     a table's or metric's lineage: every table upstream and
+                                                      downstream (with distance), the views and products a change
+                                                      would reach, and its Source tags
+    pipeline_status(job=None, runs=5)                 every Dagster job (or one): schedule and next run, latest run,
+                                                      failed steps, last success; one job's recent runs
+    platform_health()                                 healthy, warning or critical: sites, scrape targets, alerts
+                                                      firing (with runbooks), disks, memory, certificate, backups
+    search_incident_reports(text=None, kind=None, city=None, date_from=None, date_to=None, limit=10)
+                                                      the incident reports with every personal detail replaced:
+                                                      how many match, and the newest
 
 Served over streamable HTTP at /mcp (stateless, JSON responses) and through Caddy at https://<LAKE_TS_HOST>/mcp.
 Every request needs `Authorization: Bearer <MCP_TOKEN>`. The server holds no lake credentials: list_metrics and
@@ -36,7 +50,11 @@ Lakehouse glossary in OpenMetadata (loaded there by om_sync.py) as mcp-reader, a
 business_rules reads Fuseki's public SPARQL endpoint and Prometheus, both read-only and without credentials.
 data_product_info combines Fuseki (the catalog's DCAT and readiness graphs), OpenMetadata (contracts, as
 mcp-reader), Cube (views, readiness) and Prometheus (freshness); data_quality reads Cube and Prometheus;
-find_by_tags reads OpenMetadata's tables, tags and glossary as mcp-reader.
+find_by_tags reads OpenMetadata's tables, tags and glossary as mcp-reader. describe_table adds the products (Fuseki),
+contracts (OpenMetadata) and Cube's meta.reads (which tables each view reads); lineage walks OpenMetadata's lineage,
+which om_sync.py publishes from dbt. pipeline_status sends read queries to Dagster's GraphQL API (never a write: it
+can't start or stop a run); platform_health reads Prometheus. search_incident_reports goes through Cube's
+incident_reports view, which reads world_gold.incident_report_redacted, never the raw narratives.
 """
 import base64
 import difflib
@@ -67,6 +85,7 @@ OM_READER = "mcp-reader@open-metadata.org"
 GLOSSARY = "Lakehouse"
 FUSEKI = os.environ.get("FUSEKI_URL", "http://fuseki:3030/fuseki") + "/lakehouse"
 PROMETHEUS = os.environ.get("PROMETHEUS_URL", "http://prometheus:9090/prometheus")
+DAGSTER = os.environ.get("DAGSTER_GRAPHQL", "http://dagster-webserver:3000/dagster/graphql")
 RULEBOOK = "https://lakehouse.invalid/graph/rulebook"
 OPERATORS = ["equals", "notEquals", "contains", "notContains", "startsWith", "endsWith", "gt", "gte", "lt", "lte",
              "set", "notSet"]
@@ -91,7 +110,12 @@ server = MCPServer(
                  "SQL access, by design. data_product_info says what a data product promises and whether this "
                  "month's number is final and fresh; data_quality says how clean the data is; find_by_tags finds tables "
                  "and columns by their tags (CJIS, personal data, source, layer, glossary terms), and lists the tags "
-                 "when asked with none.")
+                 "when asked with none. describe_table says what one table holds (columns, types, tags, restricted "
+                 "and personal columns, products, contract, views); lineage says what a table or metric is built from "
+                 "and what depends on it. pipeline_status says whether the jobs ran and when they run next; "
+                 "platform_health says what's up, what's alerting and how full the disks are. "
+                 "search_incident_reports searches what was written about the fights, with every personal detail "
+                 "already replaced.")
 
 
 # ---- Results (typed, so clients get structured content with a schema) -----------------------------------------
@@ -952,6 +976,489 @@ def find_by_tags(tags: list[str] | None = None, match: str = "any", level: str =
     found.sort(key=lambda t: t.table)
     return TagSearch(asked=list(tags), searched=sorted(searching), match=match, level=level, tables=found,
                      table_count=len(found), column_count=sum(len(t.columns) for t in found), tags=[])
+
+
+# ---- One table, and where it comes from (OpenMetadata, Fuseki, Cube) ------------------------------------------
+class ColumnInfo(BaseModel):
+    """One column: its type, description and tags, the glossary terms it speaks, and whether it's restricted (Cube
+    masks it) or personal (the tagger found personal data in it, or a steward marked it)."""
+    name: str
+    type: str
+    description: str
+    tags: list[str]
+    terms: list[str]
+    restricted: bool
+    personal: bool
+
+
+class TableInfo(BaseModel):
+    """What one lake table holds: its layer, description and tags, its columns in order, the data products that
+    deliver it, the data contract OpenMetadata holds for it, and the Cube views (or public cubes) that read it."""
+    table: str
+    description: str
+    layer: str | None
+    tags: list[str]
+    column_count: int
+    columns: list[ColumnInfo]
+    products: list[str]
+    contract: ContractInfo | None
+    cube_views: list[str]
+
+
+class LineageStep(BaseModel):
+    """A table on a lineage path, and how many steps away it is (1: built straight from it, or straight into it)."""
+    table: str
+    depth: int
+
+
+class Lineage(BaseModel):
+    """Where a table or metric comes from and what depends on it. For a metric, metric_views offer it and reads are
+    the tables those views read; upstream then starts at those tables (depth 1)."""
+    asked: str
+    kind: str
+    table: str | None
+    metric_views: list[str]
+    reads: list[str]
+    upstream: list[LineageStep]
+    downstream: list[LineageStep]
+    cube_views: list[str]
+    products: list[str]
+    sources: list[str]
+
+
+PERSONAL_TAGS = ("PIIType.", "PII.Sensitive", "Sensitivity.Personal")
+
+
+def lake_table_names():
+    """Every lakehouse table OpenMetadata holds, as schema.table (one page at a time, names only)."""
+    out, after = [], None
+    while True:
+        page = om("tables?database=lakehouse.lake&limit=200" + (f"&after={urllib.parse.quote(after)}" if after else ""))
+        out += [e["fullyQualifiedName"].removeprefix(LAKE_FQN) for e in page.get("data", [])]
+        after = (page.get("paging") or {}).get("after")
+        if not after:
+            return sorted(out)
+
+
+def find_table(asked, names, strict=True):
+    """schema.table for a full or bare table name, in any case. An ambiguous bare name is refused with the tables it
+    could be; an unknown one is refused with close matches, or gives None when strict is False."""
+    key = asked.strip().casefold()
+    exact = [n for n in names if n.casefold() == key]
+    if exact:
+        return exact[0]
+    bare = sorted(n for n in names if n.split(".", 1)[1].casefold() == key)
+    if len(bare) == 1:
+        return bare[0]
+    if bare:
+        raise ToolError(f"{asked!r} is a table in several schemas; name one: {', '.join(bare)}")
+    if not strict:
+        return None
+    close = difflib.get_close_matches(key, names, n=5, cutoff=0.6)
+    raise ToolError(f"No lake table {asked!r}." + (f" Did you mean: {', '.join(close)}?" if close else "")
+                    + " Name it schema.table (world_gold.fct_charge); find_by_tags finds tables by their tags.")
+
+
+def cube_reads():
+    """{public Cube view or cube: the lake tables it reads}, from each one's meta.reads in Cube's /meta."""
+    return {c["name"]: set((c.get("meta") or {}).get("reads") or []) for c in cube("meta")["cubes"]}
+
+
+@server.tool()
+def describe_table(table: str) -> TableInfo:
+    """What one lake table holds, from OpenMetadata: its layer (Bronze, Silver, Gold, Reference, Operations), its
+    description and tags, and every column in order with its type, description, tags and the glossary terms it speaks;
+    restricted marks the columns Cube masks, personal those holding personal data (a PIIType tag, OpenMetadata's
+    PII.Sensitive or a steward's Sensitivity.Personal). Also the data products that deliver the table, its data contract
+    (refresh promise), and the Cube views that read it (ask query_metric through those). table is schema.table
+    (world_gold.fct_charge) or a bare name only one schema has (fct_charge), in any case. Metadata only: never a row."""
+    name = find_table(table, lake_table_names())
+    e = om(f"tables/name/{LAKE_FQN}{name}?fields=columns,tags")
+    tags = sorted({x["tagFQN"] for x in e.get("tags") or []})
+    columns = []
+    for c in e.get("columns") or []:
+        ctags = sorted({x["tagFQN"] for x in c.get("tags") or []})
+        columns.append(ColumnInfo(
+            name=c["name"], type=c.get("dataType", ""), description=text(c.get("description")), tags=ctags,
+            terms=[t.removeprefix(f"{GLOSSARY}.") for t in ctags if t.startswith(f"{GLOSSARY}.")],
+            restricted="Sensitivity.Restricted" in ctags,
+            personal=any(t.startswith(PERSONAL_TAGS) for t in ctags)))
+    layer = next((t.split(".", 1)[1] for t in tags if t.startswith("Layer.")), None)
+    products = sorted(n for n, p in product_catalog().items() if name in p["tables"])
+    return TableInfo(table=name, description=text(e.get("description")), layer=layer, tags=tags,
+                     column_count=len(columns), columns=columns, products=products,
+                     contract=contracts_by_table().get(name),
+                     cube_views=sorted(v for v, reads in cube_reads().items() if name in reads))
+
+
+def neighbours(table, up):
+    """The tables one lineage step from table in OpenMetadata: what it's built from (up) or what's built from it."""
+    got = om(f"lineage/table/name/{LAKE_FQN}{table}?upstreamDepth={int(up)}&downstreamDepth={int(not up)}")
+    names = {n["id"]: n["fullyQualifiedName"].removeprefix(LAKE_FQN) for n in got.get("nodes") or []}
+    me = got["entity"]["id"]
+    if up:
+        return {names[e["fromEntity"]] for e in got.get("upstreamEdges") or []
+                if e["toEntity"] == me and e["fromEntity"] in names}
+    return {names[e["toEntity"]] for e in got.get("downstreamEdges") or []
+            if e["fromEntity"] == me and e["toEntity"] in names}
+
+
+def walk(starts, up):
+    """{table: steps away} for every table reachable from starts, one level at a time (OpenMetadata answers at most
+    three levels per call, and a level at a time keeps the shortest distance); starts themselves are left out."""
+    found, frontier, level = {}, list(starts), 0
+    seen = set(starts)
+    while frontier:
+        level += 1
+        following = []
+        for t in frontier:
+            for n in sorted(neighbours(t, up) - seen):
+                seen.add(n)
+                found[n] = level
+                following.append(n)
+        frontier = following
+    return found
+
+
+def steps(depths):
+    """[LineageStep], nearest first, then by name."""
+    return [LineageStep(table=t, depth=d) for t, d in sorted(depths.items(), key=lambda x: (x[1], x[0]))]
+
+
+@server.tool()
+def lineage(name: str) -> Lineage:
+    """Where a table or a metric comes from, and what depends on it, from the lineage OpenMetadata holds (dbt's, one
+    edge per table a model is built from). name is a lake table (schema.table, or a bare name one schema has) or a
+    metric (people_in_custody, or view.metric). For a table: upstream, every table it's built from with how many
+    steps away (1: directly); downstream, every table built from it; the Cube views and data products that read it or
+    anything built from it (what a change would reach); and sources, its Source tags (where its data first came from).
+    For a metric: the views that offer it, the tables they read, and everything those are built from."""
+    names = lake_table_names()
+    table = find_table(name, names, strict=False)
+    reads = cube_reads()
+    meta = cube("meta")["cubes"]
+    products_of_view = {c["name"]: (c.get("meta") or {}).get("product") for c in meta}
+    if table is not None:
+        up, down = walk([table], up=True), walk([table], up=False)
+        reached = {table} | set(down)
+        views = sorted(v for v, r in reads.items() if r & reached)
+        products = sorted(n for n, p in product_catalog().items() if p["tables"] & reached)
+        tags = {x["tagFQN"] for x in om(f"tables/name/{LAKE_FQN}{table}?fields=tags").get("tags") or []}
+        return Lineage(asked=name, kind="table", table=table, metric_views=[], reads=[], upstream=steps(up),
+                       downstream=steps(down), cube_views=views, products=products,
+                       sources=sorted(t for t in tags if t.startswith("Source.")))
+    wanted = name.strip()
+    offering = sorted(c["name"] for c in meta for m in c.get("measures", []) if m.get("public", True)
+                      and wanted in (m["name"], m["name"].split(".", 1)[1]))
+    if not offering:
+        raise ToolError(f"No lake table or metric named {name!r}. list_metrics lists the metrics; find_by_tags (no tags) "
+                        "lists the tags to find tables by; a table is named schema.table (world_gold.fct_charge).")
+    read = set().union(*(reads.get(v, set()) for v in offering))
+    up = {t: 1 for t in read} | {t: d + 1 for t, d in walk(sorted(read), up=True).items() if t not in read}
+    sources = set()
+    for t in sorted(read):
+        if t in names:
+            sources |= {x["tagFQN"] for x in om(f"tables/name/{LAKE_FQN}{t}?fields=tags").get("tags") or []
+                        if x["tagFQN"].startswith("Source.")}
+    return Lineage(asked=name, kind="metric", table=None, metric_views=offering, reads=sorted(read), upstream=steps(up),
+                   downstream=[], cube_views=offering,
+                   products=sorted({products_of_view[v] for v in offering if products_of_view.get(v)}),
+                   sources=sorted(sources))
+
+
+# ---- The jobs (Dagster) and the platform (Prometheus) ---------------------------------------------------------
+class ScheduleInfo(BaseModel):
+    """A job's schedule: its cron and time zone, whether it's running, and its next run (Central time)."""
+    name: str
+    cron: str
+    timezone: str
+    state: str
+    next_run: str | None
+
+
+class RunInfo(BaseModel):
+    """One run of a job: its status, when it started and ended (Central time), how long it took, what started it
+    (a schedule, a sensor, a backfill, or by hand) and the steps that failed."""
+    run_id: str
+    status: str
+    started: str | None
+    ended: str | None
+    minutes: float | None
+    trigger: str
+    failed_steps: list[str]
+
+
+class JobStatus(BaseModel):
+    """One Dagster job: what it does, its schedule, its latest run and last success; runs only when one job is asked."""
+    name: str
+    description: str
+    schedule: ScheduleInfo | None
+    latest_run: RunInfo | None
+    last_success: str | None
+    runs: list[RunInfo]
+
+
+class SensorInfo(BaseModel):
+    """A Dagster sensor and whether it's running."""
+    name: str
+    state: str
+
+
+class Pipelines(BaseModel):
+    """pipeline_status' answer: the jobs asked about, and the sensors that report their runs to Prometheus."""
+    jobs: list[JobStatus]
+    sensors: list[SensorInfo]
+
+
+RUN_FIELDS = "runId status startTime endTime tags { key value } stepStats { stepKey status }"
+
+
+def dagster(query, variables=None):
+    """One read query to Dagster's GraphQL API; returns its data. Queries only: the server never starts or stops a run."""
+    req = urllib.request.Request(DAGSTER, data=json.dumps({"query": query, "variables": variables or {}}).encode(),
+                                 headers={"Content-Type": "application/json"})
+    try:
+        body = json.loads(urllib.request.urlopen(req, timeout=30).read())
+    except (urllib.error.URLError, ValueError) as e:
+        raise ToolError(f"Dagster is unavailable ({e})") from None
+    if body.get("errors"):
+        raise ToolError(f"Dagster refused the query: {body['errors'][0].get('message', '')[:300]}")
+    return body["data"]
+
+
+def run_info(r):
+    """A RunInfo from one of Dagster's runs."""
+    tags = {t["key"]: t["value"] for t in r.get("tags") or []}
+    trigger = (f"schedule {tags['dagster/schedule_name']}" if "dagster/schedule_name" in tags
+               else f"sensor {tags['dagster/sensor_name']}" if "dagster/sensor_name" in tags
+               else "backfill" if "dagster/backfill" in tags else "by hand")
+    start, end = r.get("startTime"), r.get("endTime")
+    return RunInfo(run_id=r["runId"], status=r["status"], started=central(start) if start else None,
+                   ended=central(end) if end else None,
+                   minutes=round((end - start) / 60, 2) if start and end else None, trigger=trigger,
+                   failed_steps=sorted(s["stepKey"] for s in r.get("stepStats") or [] if s.get("status") == "FAILURE"))
+
+
+def job_runs(job, limit, success_only=False):
+    """A job's latest runs from Dagster, newest first."""
+    statuses = ", statuses: [SUCCESS]" if success_only else ""
+    data = dagster(f"query($job: String!) {{ runsOrError(filter: {{pipelineName: $job{statuses}}}, limit: {limit}) "
+                   f"{{ ... on Runs {{ results {{ {RUN_FIELDS} }} }} }} }}", {"job": job})
+    return data["runsOrError"].get("results") or []
+
+
+@server.tool()
+def pipeline_status(job: str | None = None, runs: int = 5) -> Pipelines:
+    """Whether the lakehouse's Dagster jobs are running well: every job (or one by name) with what it does, its
+    schedule (cron, time zone, running or stopped, next run in Central time), its latest run (status, start and end,
+    minutes, what started it, the steps that failed) and when it last succeeded. With job, also its last runs (up to
+    25), newest first. Also the sensors that report every run to Prometheus. daily_lake loads and builds the lake each
+    morning; world_refresh and world_monthly_job rebuild the expanded world monthly; lake_housekeeping tidies weekly."""
+    repo = dagster("{ repositoriesOrError { ... on RepositoryConnection { nodes { jobs { name description } "
+                   "schedules { name pipelineName cronSchedule executionTimezone scheduleState { status } "
+                   "futureTicks(limit: 1) { results { timestamp } } } sensors { name sensorState { status } } } } } }")
+    node = repo["repositoriesOrError"]["nodes"][0]
+    jobs = {j["name"]: j for j in node["jobs"] if not j["name"].startswith("__")}
+    if job is not None and job not in jobs:
+        raise ToolError(f"No job {job!r}. Jobs: {', '.join(sorted(jobs))}")
+    schedules = {s["pipelineName"]: s for s in node["schedules"]}
+    out = []
+    for name in sorted(jobs) if job is None else [job]:
+        s = schedules.get(name)
+        ticks = (s or {}).get("futureTicks", {}).get("results") or []
+        recent = job_runs(name, max(1, min(runs, 25)) if job else 1)
+        success = job_runs(name, 1, success_only=True)
+        out.append(JobStatus(
+            name=name, description=jobs[name].get("description") or "",
+            schedule=ScheduleInfo(name=s["name"], cron=s["cronSchedule"], timezone=s["executionTimezone"],
+                                  state=s["scheduleState"]["status"],
+                                  next_run=central(ticks[0]["timestamp"]) if ticks else None) if s else None,
+            latest_run=run_info(recent[0]) if recent else None,
+            last_success=central(success[0]["endTime"]) if success and success[0].get("endTime") else None,
+            runs=[run_info(r) for r in recent] if job else []))
+    return Pipelines(jobs=out, sensors=[SensorInfo(name=x["name"], state=x["sensorState"]["status"])
+                                        for x in node["sensors"]])
+
+
+class SiteInfo(BaseModel):
+    """A lakehouse site behind Caddy, and whether its probe answered."""
+    name: str
+    up: bool
+
+
+class TargetInfo(BaseModel):
+    """Something Prometheus scrapes (an exporter, a service), and whether the last scrape worked."""
+    job: str
+    instance: str
+    up: bool
+
+
+class AlertInfo(BaseModel):
+    """An alert firing now: its severity (critical: act now; warning: look today), what it says, since when (Central
+    time), and its runbook."""
+    name: str
+    severity: str
+    summary: str
+    since: str | None
+    runbook: str
+
+
+class Vitals(BaseModel):
+    """The VM's disks (/ and /lake, percent used), memory available (percent), the site certificate's days left, and
+    how old the newest catalog backup, off-machine backup (hours) and restore drill (days) are. None: no figure."""
+    disk_used_pct: dict[str, float]
+    memory_available_pct: float | None
+    certificate_days_left: float | None
+    catalog_backup_age_hours: float | None
+    offsite_backup_age_hours: float | None
+    restore_drill_age_days: float | None
+
+
+class Health(BaseModel):
+    """platform_health's answer: critical (a critical alert, or anything down), warning (a warning alert) or healthy;
+    the sites, the scrape targets, the alerts firing, whether the Watchdog heartbeat is, and the vitals."""
+    status: str
+    sites: list[SiteInfo]
+    targets: list[TargetInfo]
+    alerts: list[AlertInfo]
+    watchdog: bool
+    vitals: Vitals
+
+
+def prometheus_api(path):
+    """A Prometheus API path's data; ToolError when Prometheus can't be reached."""
+    try:
+        return json.loads(urllib.request.urlopen(f"{PROMETHEUS}/api/v1/{path}", timeout=15).read())["data"]
+    except (urllib.error.URLError, ValueError, KeyError) as e:
+        raise ToolError(f"Prometheus is unavailable ({e})") from None
+
+
+def instant(stamp):
+    """Epoch seconds from an RFC 3339 time as Prometheus writes it (2026-11-03T21:17:37.381127727Z: nanoseconds, which
+    Python's parser doesn't take, are cut to microseconds)."""
+    stamp = re.sub(r"(\.\d{6})\d+", r"\1", stamp.replace("Z", "+00:00"))
+    return datetime.fromisoformat(stamp).timestamp()
+
+
+def one(query, scale=1.0, digits=2):
+    """The first value a PromQL query returns now, times scale and rounded, or None when it returns nothing."""
+    series = prometheus(query)
+    return round(float(series[0]["value"][1]) * scale, digits) if series else None
+
+
+@server.tool()
+def platform_health() -> Health:
+    """Whether the lakehouse platform is well, from Prometheus: status critical (a critical alert firing, or a site or
+    scrape target down), warning (a warning alert) or healthy; every site behind Caddy and every scrape target, up or
+    down; every alert firing (Watchdog aside: it always fires, to prove alerting works, and watchdog says it is), with
+    severity, summary, since when and its runbook; and the vitals: disk use of / and /lake, memory available, the
+    certificate's days left, and the age of the latest catalog backup, off-machine backup and restore drill.
+    pipeline_status says more about the jobs; data_quality about the data."""
+    alerts = [a for a in prometheus_api("alerts")["alerts"] if a.get("state") == "firing"]
+    watchdog = any(a["labels"].get("alertname") == "Watchdog" for a in alerts)
+    firing = sorted((AlertInfo(name=a["labels"]["alertname"], severity=a["labels"].get("severity", "none"),
+                               summary=a.get("annotations", {}).get("summary", ""),
+                               since=central(instant(a["activeAt"])) if a.get("activeAt") else None,
+                               runbook=a.get("annotations", {}).get("runbook_url", ""))
+                     for a in alerts if a["labels"].get("alertname") != "Watchdog"),
+                    key=lambda a: (a.severity != "critical", a.name))
+    probes = prometheus_api("query?" + urllib.parse.urlencode({"query": 'probe_success{job="sites"}'}))["result"]
+    ups = prometheus_api("query?" + urllib.parse.urlencode({"query": 'up{job!="sites"}'}))["result"]
+    sites = sorted((SiteInfo(name=x["metric"].get("site", ""), up=x["value"][1] == "1") for x in probes),
+                   key=lambda s: s.name)
+    targets = sorted((TargetInfo(job=x["metric"].get("job", ""), instance=x["metric"].get("instance", ""),
+                                 up=x["value"][1] == "1") for x in ups), key=lambda t: (t.job, t.instance))
+    disks = {x["metric"]["mountpoint"]: round(100 * float(x["value"][1]), 1) for x in prometheus(
+        '1 - node_filesystem_avail_bytes{mountpoint=~"/|/lake"} / node_filesystem_size_bytes{mountpoint=~"/|/lake"}')
+        or []}
+    vitals = Vitals(
+        disk_used_pct=disks,
+        memory_available_pct=one("node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes", 100, 1),
+        certificate_days_left=one('min(probe_ssl_earliest_cert_expiry{job="sites"}) - time()', 1 / 86400, 1),
+        catalog_backup_age_hours=one("time() - max(lakehouse_backup_last_success_timestamp_seconds)", 1 / 3600),
+        offsite_backup_age_hours=one("time() - max(lakehouse_offsite_backup_last_success_timestamp_seconds)", 1 / 3600),
+        restore_drill_age_days=one("time() - max(lakehouse_restore_drill_last_success_timestamp_seconds)", 1 / 86400))
+    down = any(not s.up for s in sites) or any(not t.up for t in targets)
+    status = ("critical" if down or any(a.severity == "critical" for a in firing)
+              else "warning" if firing else "healthy")
+    return Health(status=status, sites=sites, targets=targets, alerts=firing, watchdog=watchdog, vitals=vitals)
+
+
+# ---- Incident reports (Cube's incident_reports view: personal details already replaced) ------------------------
+REPORT_KINDS = ["field report", "witness statement", "desk report"]
+REPORTS = "incident_reports."
+
+
+class Report(BaseModel):
+    """One incident report, every personal detail replaced: which fight, what kind of report, when it was filed, the
+    fight's kind, month and city, and what was written."""
+    incident_report_id: int
+    incident_id: int | None
+    report_kind: str | None
+    filed_at: str | None
+    incident_type: str | None
+    incident_month: str | None
+    city: str | None
+    narrative: str | None
+
+
+class ReportSearch(BaseModel):
+    """search_incident_reports' answer: what was searched for, how many reports match, and the newest of them."""
+    text: str | None
+    kind: str | None
+    city: str | None
+    date_from: str | None
+    date_to: str | None
+    matches: int
+    reports: list[Report]
+    note: str
+
+
+def whole(value):
+    """A Cube number (sent as text) as int, or None."""
+    return int(value) if value not in (None, "") else None
+
+
+@server.tool()
+def search_incident_reports(text: str | None = None, kind: str | None = None, city: str | None = None,
+                            date_from: str | None = None, date_to: str | None = None,
+                            limit: int = 10) -> ReportSearch:
+    """Search what heroes, witnesses and the desk wrote about the expanded world's fights (200,000 incident reports),
+    with every personal detail already replaced: names, aliases, SIDs, birth dates and phone numbers read [PERSON NAME],
+    [ALIAS], [SID], [BIRTH DATE] and [PHONE], so a person can't be found by name. text: words or a phrase the report
+    contains, in any case (heist, bridge collapse, "taken into custody"). kind: field report (a hero who was there),
+    witness statement (a civilian) or desk report (the call as the desk took it). city: the fight's city. date_from,
+    date_to: the filing dates, YYYY-MM-DD, inclusive. Give at least one. Returns how many reports match and the newest
+    limit of them (10; at most 50), each with its fight's kind, month and city. Count with query_metric (metric reports,
+    view incident_reports) to break matches down by city, kind or month."""
+    if not any((text, kind, city, date_from, date_to)):
+        raise ToolError("Give text to search for (words or a phrase, any case), a kind, a city, or filing dates "
+                        "(date_from, date_to)")
+    if kind is not None and kind not in REPORT_KINDS:
+        raise ToolError(f"No kind {kind!r}. Kinds: {', '.join(REPORT_KINDS)}")
+    date_from, date_to = a_day(date_from, "date_from"), a_day(date_to, "date_to")
+    filters = [{"member": REPORTS + member, "operator": op, "values": [value]} for member, op, value in
+               (("narrative", "contains", text), ("report_kind", "equals", kind), ("city_name", "equals", city))
+               if value]
+    query = {"filters": filters}
+    if date_from or date_to:
+        query["timeDimensions"] = [{"dimension": REPORTS + "filed_at",
+                                    "dateRange": [date_from or "1900-01-01", date_to or "2999-12-31"]}]
+    counted = cube("load", {"query": {**query, "measures": [REPORTS + "reports"]}}).get("data", [])
+    dims = ["incident_report_id", "report_incident_id", "report_kind", "filed_at", "incident_type", "incident_month",
+            "city_name", "narrative"]
+    rows = cube("load", {"query": {**query, "dimensions": [REPORTS + d for d in dims],
+                                   "order": [[REPORTS + "filed_at", "desc"], [REPORTS + "incident_report_id", "desc"]],
+                                   "limit": max(1, min(limit, 50))}}).get("data", [])
+    day = lambda v: str(v)[:10] if v else None   # noqa: E731
+    reports = [Report(incident_report_id=int(r[REPORTS + "incident_report_id"]),
+                      incident_id=whole(r.get(REPORTS + "report_incident_id")),
+                      report_kind=r.get(REPORTS + "report_kind"), filed_at=r.get(REPORTS + "filed_at"),
+                      incident_type=r.get(REPORTS + "incident_type"), incident_month=day(r.get(REPORTS + "incident_month")),
+                      city=r.get(REPORTS + "city_name"), narrative=r.get(REPORTS + "narrative")) for r in rows]
+    return ReportSearch(text=text, kind=kind, city=city, date_from=date_from, date_to=date_to,
+                        matches=whole(counted[0][REPORTS + "reports"]) if counted else 0, reports=reports,
+                        note="Personal details are replaced before the search, from world_gold.incident_report_redacted.")
 
 
 # ---- HTTP ----------------------------------------------------------------------------------------------------

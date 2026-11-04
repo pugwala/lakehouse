@@ -3,6 +3,7 @@
 # for every group except restricted_reader; acceptance/test_cube.py checks the masked list equals the dbt tags.
 cubes:
   - name: offender_records
+    meta: {reads: [gold.fct_offender_record]}
     sql_table: lake.gold.fct_offender_record
     description: One row per offender record from the latest load (gold.fct_offender_record).
 
@@ -124,6 +125,7 @@ cubes:
           includes: "*"
 
   - name: units
+    meta: {reads: [gold.dim_unit]}
     sql_table: lake.gold.dim_unit
     dimensions:
       - name: unit_code
@@ -136,6 +138,7 @@ cubes:
         type: string
 
   - name: offenses
+    meta: {reads: [gold.dim_offense]}
     sql_table: lake.gold.dim_offense
     dimensions:
       - name: offense_code

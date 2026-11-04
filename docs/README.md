@@ -23,5 +23,5 @@ Who's who in these docs:
 
 The Claude Doc links open only for their owner; the Markdown here is the readable copy. Diagrams embedded in
 the docs don't export. The Plan's architecture drawing is committed as a picture,
-[architecture.png](architecture.png): **architecture v3.2, as of 2026-11-03** (git tag `arch-v3.2`), and
+[architecture.png](architecture.png): **architecture v3.3, as of 2026-11-04** (git tag `arch-v3.3`), and
 lakehouse-plan.md shows it with the table of every version. The ontology guide's figures still show as placeholders.

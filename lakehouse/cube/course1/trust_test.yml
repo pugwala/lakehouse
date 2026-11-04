@@ -4,6 +4,7 @@
 cubes:
   - name: trust_test
     sql_table: lake.gold.trust_test
+    meta: {reads: [gold.trust_test]}
     description: The course's Trust Test (gold.trust_test), one row per question.
 
     dimensions:

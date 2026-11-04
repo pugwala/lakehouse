@@ -204,6 +204,7 @@ cubes:
   # The world's data quality: one row per value silver flagged (world_silver.exceptions). Counts only: no member
   # carries a flagged value or a row id, because a flagged value can be a name. The MCP server's data_quality reads it.
   - name: world_exceptions
+    meta: {reads: [world_silver.exceptions]}
     sql_table: lake.world_silver.exceptions
     description: Values the expanded world's silver layer flagged, by silver table, column and rule (counts only).
     dimensions:
@@ -231,6 +232,43 @@ cubes:
         sql: "{CUBE}.table_name || ':' || CAST({CUBE}.id AS VARCHAR)"
         type: count_distinct
         description: Distinct rows with at least one flagged value; never add these up across groups.
+
+  # The incident reports, every personal detail already replaced (world_gold.incident_report_redacted). What the MCP
+  # server's search_incident_reports searches; the raw narratives in silver and bronze are never in Cube.
+  - name: world_reports
+    sql_table: lake.world_gold.incident_report_redacted
+    public: false
+    description: One row per incident report, names, aliases, SIDs, birth dates and phones replaced.
+    joins:
+      - name: world_incidents
+        relationship: many_to_one
+        sql: "{CUBE}.incident_id = {world_incidents}.incident_id"
+    dimensions:
+      - name: incident_report_id
+        sql: incident_report_id
+        type: number
+        primary_key: true
+        public: true
+      - name: report_incident_id
+        sql: incident_id
+        type: number
+        description: The fight the report is about.
+      - name: report_kind
+        sql: report_kind
+        type: string
+        description: field report (a hero who was there), witness statement (a civilian) or desk report (the call).
+      - name: filed_at
+        sql: filed_at
+        type: time
+        description: When the report was filed.
+      - name: narrative
+        sql: narrative
+        type: string
+        description: What was written, each personal detail replaced by [PERSON NAME], [ALIAS], [SID], [BIRTH DATE] or [PHONE].
+    measures:
+      - name: reports
+        type: count
+        description: Incident reports.
 
   # Readiness for each world product: mart_readiness.period_readiness, one row per month-end (see custody.yml).
   - name: field_incidents_readiness
@@ -271,7 +309,7 @@ views:
     description: >
       Field incidents: fights each month, by city, kind and outcome, with bystanders hurt. period_status says
       whether a month's numbers are final yet, waiting_on who they still wait for. People are in fight_participants.
-    meta: {product: field-incidents}
+    meta: {product: field-incidents, reads: [mart_readiness.period_readiness, world_gold.dim_location, world_gold.fct_incident]}
     cubes:
       - join_path: world_incidents
         includes: [incident_month, incident_type, outcome, fights, bystanders_injured, bystanders_killed,
@@ -285,7 +323,7 @@ views:
     description: >
       Who took part in the fights: by month, side, role and what became of them. Count people with
       people_involved (distinct person keys, never summed); participations counts each person once per fight.
-    meta: {product: field-incidents}
+    meta: {product: field-incidents, reads: [mart_readiness.period_readiness, world_gold.fct_participation]}
     cubes:
       - join_path: world_participation
         includes: [incident_month, side, role, status, participations, people_involved]
@@ -297,7 +335,7 @@ views:
       Incident damage: what the fights destroyed, by the fight's month, city and asset type; what it cost, what
       insurance paid, and the uninsured cost. period_status says whether a month's numbers are final yet (they
       wait on Insurance's claims as well as Field Operations' reports).
-    meta: {product: incident-damage}
+    meta: {product: incident-damage, reads: [mart_readiness.period_readiness, world_gold.dim_location, world_gold.fct_damage, world_gold.fct_incident]}
     cubes:
       - join_path: world_damage
         includes: [incident_month, asset_type, insured, repair_status, assessments, damage_cost_usd,
@@ -311,7 +349,7 @@ views:
     description: >
       Court outcomes: charges by the month the court decided them, by offense and outcome, with convictions and
       the distinct people charged (never summed). period_status says whether a month's decisions are final yet.
-    meta: {product: court-outcomes}
+    meta: {product: court-outcomes, reads: [gold.dim_offense, mart_readiness.period_readiness, world_gold.fct_charge]}
     cubes:
       - join_path: world_charges
         includes: [decided_on, filed_on, offense_code, outcome, is_conviction, charges, convictions, people_charged]
@@ -319,3 +357,17 @@ views:
         includes: [offense_description]
       - join_path: world_charges.court_outcomes_readiness
         includes: [period_status, waiting_on]
+
+  - name: incident_reports
+    meta: {reads: [world_gold.dim_location, world_gold.fct_incident, world_gold.incident_report_redacted]}
+    description: >
+      Incident reports, searchable: what heroes, witnesses and the desk wrote about each fight, with every personal
+      detail already replaced ([PERSON NAME], [ALIAS], [SID], [BIRTH DATE], [PHONE]), by kind, filing time, the
+      fight's kind and month, and city.
+    cubes:
+      - join_path: world_reports
+        includes: [incident_report_id, report_incident_id, report_kind, filed_at, narrative, reports]
+      - join_path: world_reports.world_incidents
+        includes: [incident_type, incident_month]
+      - join_path: world_reports.world_incidents.world_cities
+        includes: [city_name]

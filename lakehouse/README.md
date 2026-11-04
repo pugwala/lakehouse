@@ -274,7 +274,7 @@ single-file bind mount keeps showing the old one, which is how a Caddyfile chang
 
 ### MCP: governed metrics, definitions and rules for an AI agent
 
-An MCP server at `https://<LAKE_TS_HOST>/mcp` gives an agent seven tools instead of SQL access:
+An MCP server at `https://<LAKE_TS_HOST>/mcp` gives an agent twelve read-only tools instead of SQL access:
 
 - `list_metrics()`: every metric `query_metric` offers, one entry per Cube view that has it, with its title,
   description, data product, dimensions and aggregation. `countDistinct` marks a count of distinct people, whose
@@ -311,22 +311,51 @@ An MCP server at `https://<LAKE_TS_HOST>/mcp` gives an agent seven tools instead
   `Layer.Gold`, `Refresh.Monthly`, ...), the hand-set `Sensitivity.*`, OpenMetadata's `PII.Sensitive`, and the
   glossary terms (`Lakehouse.SID Number`). A tag is a full name, a bare name when one family has it (`CJIS`), or a
   whole family (`PIIType.*`); case, spaces and hyphens don't matter, and a wrong one names close matches.
-  - one tag: `["Governance.CJIS"]` finds the 54 CJIS tables;
+  - one tag: `["Governance.CJIS"]` finds the 57 CJIS tables;
   - several: `["PIIType.BirthDate", "PIIType.FreeText"]` finds tables with either, each saying which it has;
   - all of them: `match="all"` keeps only tables with every tag, on the table or any column (CJIS with a birth date
     and free text: the raw and cleansed course records). Every one of the 48 at once answers too (none).
   - `level`: `"table"` looks only at tags on tables; `"column"` only at columns, and with `match="all"` one column
     must carry every tag (a birth date that is also hand-tagged Personal).
   With no tags it lists every tag in use, what it means, and how many tables and columns carry it.
+- `describe_table(table)`: one lake table from OpenMetadata: its layer, description and tags, and every column in
+  order with its type, description, tags and glossary terms, `restricted` (Cube masks it) and `personal` (a
+  `PIIType` tag, `PII.Sensitive` or a steward's `Sensitivity.Personal`). Also the data products that deliver it, its
+  data contract, and the Cube views that read it. `world_gold.fct_charge`, or `fct_charge` alone when one schema has
+  it; an ambiguous name (`incident`) lists the tables it could be. Metadata only, never a row.
+- `lineage(name)`: where a table or metric comes from and what depends on it, from the lineage OpenMetadata holds
+  (`om_sync.py` publishes dbt's: one edge per table a model is built from, marked `DbtLineage`, so an edge a steward
+  draws by hand is kept). For a table: every table upstream and downstream, with how many steps away; the Cube views
+  and data products that read it or anything built from it (what a change would reach); and its `Source` tags. For a
+  metric (`people_in_custody`): the views that offer it, the tables they read (each view's `meta.reads`), and
+  everything upstream of those.
+- `pipeline_status(job=None, runs=5)`: every Dagster job, or one: what it does, its schedule (cron, time zone,
+  running or stopped, next run), its latest run (status, start and end in Central time, minutes, what started it,
+  the steps that failed) and its last success; with `job`, its recent runs. Read queries to Dagster's GraphQL API
+  only: the server can't start or stop a run.
+- `platform_health()`: `critical` (a critical alert, or a site or scrape target down), `warning` or `healthy`, from
+  Prometheus: every site behind Caddy and scrape target, every alert firing with its severity, summary, since when
+  and runbook (Watchdog aside; `watchdog` says it's beating), and the vitals: disk use of `/` and `/lake`, memory
+  available, the certificate's days left, and the age of the latest catalog backup, off-machine backup and restore
+  drill.
+- `search_incident_reports(text=None, kind=None, city=None, date_from=None, date_to=None, limit=10)`: the
+  expanded world's 200,000 incident reports, searched through Cube's `incident_reports` view, which reads
+  `world_gold.incident_report_redacted`: every name, alias, SID, birth date and phone the mention key marks reads
+  `[PERSON NAME]`, `[ALIAS]`, `[SID]`, `[BIRTH DATE]` or `[PHONE]`, so nobody can be found by name and no raw
+  narrative reaches an agent. Words or a phrase (any case), a kind (`field report`, `witness statement`,
+  `desk report`), a city, and filing dates narrow it; the answer is how many match and the newest (up to 50), with
+  the fight's kind, month and city. The lab redacts by the key, the world's own record of each detail; a real
+  platform would use a detector, which the text sessions teach.
 
 Every request needs `Authorization: Bearer <MCP_TOKEN>` (from `.env`). The container holds no lake credentials and
 no OpenMetadata admin: it reads as `mcp-reader` (role DataConsumer only), and its Cube token has no groups, so
-restricted columns come back masked. Fuseki's SPARQL endpoint and Prometheus are read without credentials.
+restricted columns come back masked. Fuseki's SPARQL endpoint, Prometheus and Dagster's GraphQL API are read
+without credentials, on the Compose network only.
 To connect Claude Code on a machine on the tailnet, without the token ever appearing on screen:
 
 ```bash
 claude mcp add --transport http lakehouse https://<LAKE_TS_HOST>/mcp \
-  --header "Authorization: Bearer $(ssh <vm> 'grep ^MCP_TOKEN= ~/lunch-and-learn-data-cleansing/lakehouse/.env | cut -d= -f2-')"
+  --header "Authorization: Bearer $(ssh <vm> 'grep ^MCP_TOKEN= ~/lakehouse/lakehouse/.env | cut -d= -f2-')"
 ```
 
 ### OpenMetadata: what the lake means, and what's restricted
@@ -344,6 +373,10 @@ nothing (`--check` only compares):
 - the **Sensitivity** classification: `Restricted` (race, religion, STG) and `Personal` (names, birth dates, notes);
 - every table in the lake (`lakehouse.lake.<schema>.<table>`), with dbt's descriptions, a Sensitivity tag on each
   column dbt's `meta.sensitivity` marks (bronze and silver included), and glossary-term links.
+- **lineage** from dbt's manifest (`dbt/target/manifest.json`): an edge from each table a model is built from to the
+  table it builds, 120 today, marked `DbtLineage` (OpenMetadata's lineage view shows them, and the MCP server's
+  `lineage` tool walks them). An edge dbt no longer has is removed; one a steward draws by hand (any other mark) is
+  kept. Tests: `pytest lakehouse/acceptance/test_om_lineage.py` (7; 3 mutations caught).
 
 **The tags-to-masks loop.** dbt's tags are the floor, not the ceiling. A steward can tag another column
 `Sensitivity.Restricted` in OpenMetadata's UI, and `om_sync.py` keeps it (it only adds tags). `cube/sync_masks.py`
@@ -462,7 +495,7 @@ ntfy too), and `SiteDown` and `TargetDown` cover ntfy itself.
 
 **On the phone.** Install Tailscale and the ntfy app. In ntfy, add a server: `https://<LAKE_TS_HOST>:8443`, user
 `ian`, with the password from `.env`, read in your own SSH session:
-`grep '^NTFY_IAN_PASSWORD=' ~/lunch-and-learn-data-cleansing/lakehouse/.env | cut -d= -f2-`. Then subscribe to
+`grep '^NTFY_IAN_PASSWORD=' ~/lakehouse/lakehouse/.env | cut -d= -f2-`. Then subscribe to
 `lakehouse-alerts` on that server. The same login works in a browser at `https://<LAKE_TS_HOST>:8443/`. On an iPhone, keep
 Tailscale on (its VPN On Demand setting does that): iOS wakes an app only through Apple's push service, so ntfy
 forwards each message's ID and a SHA-256 hash of its topic URL to ntfy.sh (`upstream-base-url` in
@@ -860,7 +893,7 @@ tables use changes:
 | --- | --- |
 | `world_bronze` | The 15 messy CSVs as written: every column VARCHAR (blank as null), plus `_source_file` |
 | `world_silver` | The 15 tables typed and cleaned: every date format read, code spellings mapped to the code list (`seeds/world_codes.csv`, through `code_spellings`), money and numbers read, tokens as null, links resolved (`person_key` for a duplicated person). Flag, don't fix: each row's `issues` lists `{column_name, rule}`, and the view `exceptions` has one row per flagged value: `missing_token`, `two_digit_year`, `orphan`, `out_of_order`, `duplicate_person`, `unparseable` |
-| `world_gold` | `dim_location`, `dim_power`, `dim_team`, `dim_person` (one row per resolved person; no names or birth dates), `fct_incident`, `fct_participation`, `fct_power_use`, `fct_damage`, `fct_charge` (with its court outcome and, on a record's conviction, `offender_number`), `fct_mission`. Every model's contract is enforced |
+| `world_gold` | `dim_location`, `dim_power`, `dim_team`, `dim_person` (one row per resolved person; no names or birth dates), `fct_incident`, `fct_participation`, `fct_power_use`, `fct_damage`, `fct_charge` (with its court outcome and, on a record's conviction, `offender_number`), `fct_mission`, `incident_report_redacted` (every report, each detail the mention key marks replaced by `[PERSON NAME]`, `[ALIAS]`, `[SID]`, `[BIRTH DATE]` or `[PHONE]`, no author; what the MCP server searches). Every model's contract is enforced |
 
 `world_spec()` in the macros describes every column once; silver and the answer-key tests both use it. Duplicate
 people match on the SID, or on last name, first name, alias and birthday (month, day and two-digit year, so a year
@@ -975,6 +1008,16 @@ glossary's **Incident Report** term is about Incident and related to Person. Tes
 keeps every narrative; 3 dbt mutations caught). Rebuilt at M beside the live world, every one of the 75 existing
 files was byte-identical; only the four new folders were added.
 
+**Searchable without the names (2026-11-04).** `world_gold.incident_report_redacted` (dbt, monthly like silver) is
+every report with each detail the key marks replaced by its kind in capitals: `[PERSON NAME]`, `[ALIAS]`, `[SID]`,
+`[BIRTH DATE]`, `[PHONE]`; every other character is kept, and there's no author column. Cube's `incident_reports`
+view reads it, and the MCP server's `search_incident_reports` searches that view, so an agent never sees a raw
+narrative. The lab redacts by the key, the world's own record of where each detail is; a real platform would use a
+detector, which is what the text sessions teach. Tests: `pytest lakehouse/acceptance/test_report_redaction.py` (7, at
+M: every report there once, 3,000 random reports rebuilt in Python character for character, one label per mention,
+nothing left that reads like a SID or a 555-01xx phone) and `test_world_lake.py` (the same rule on the S world,
+every report); 9 mutations caught, after a gap the character-for-character check closed.
+
 **Chunk 10, the scale-up to L and benchmarks (`universe/bench.py`).** One command builds a scale and runs it end to
 end in a **scratch lake** of its own: `docker compose --profile core exec -T jupyter python -m lakehouse.universe.bench
 --scale L` (default folder `/lake/scratch/<scale>`). The scratch lake is a real DuckLake, the same Parquet format as
@@ -1045,6 +1088,7 @@ checks on a GitHub runner in about 2.5 minutes.
 | MCP server (`list_metrics`, `query_metric` with filters and time ranges, `define_term`, `business_rules`): 28 acceptance tests (`pytest lakehouse/acceptance/test_mcp.py`) and 4 bats tests, each seen failing first; the token check and synonym matching were shown to fail on deliberate breaks, and 8 mutations of the filters, time ranges and rulebook were all caught; checked end to end through Caddy (total restitution 1,333,587,950.77) | On the VM |
 | MCP `find_by_tags` (one tag, any or all of many, on tables, columns or both, forgiving names, the tag list): 10 acceptance tests (`pytest lakehouse/acceptance/test_mcp_tags.py`), all seen failing first and checked against the lake's own tag tables; 6 mutations caught, paging among them | On the VM |
 | MCP `data_product_info` and `data_quality` (and Cube's counts-only `world_exceptions`): 14 acceptance tests (`pytest lakehouse/acceptance/test_mcp_products.py`), all seen failing first; 8 mutations caught. A ninth (matching a product by title) survived because every title is its name in words, so title matching was removed as untestable | On the VM |
+| MCP `describe_table`, `lineage`, `pipeline_status`, `platform_health` and `search_incident_reports` (2026-11-04), with what they stand on: OpenMetadata lineage from dbt (`om_sync.py`), every public Cube view's `meta.reads`, and `world_gold.incident_report_redacted` with Cube's `incident_reports` view. 53 acceptance tests (`test_mcp_catalog.py` 19, `test_mcp_ops.py` 11, `test_mcp_reports.py` 9, `test_om_lineage.py` 7, `test_report_redaction.py` 7) and 18 offline (`tests/test_cube_reads.py` 17, one more in `test_world_lake.py`), all seen failing first and checked against the lake, dbt's manifest, the model files, Dagster and Prometheus asked directly; 38 mutations caught after one gap each in the city filter and the character-exact redaction check was closed. One test fails `monitoring_selftest` on purpose (its alert goes to the selftest topic) | On the VM |
 | OpenMetadata 2.0.5 with OpenSearch 2.19.6 under `/openmetadata`, no default credentials left: 8 acceptance tests (`pytest lakehouse/acceptance/test_openmetadata.py`) and 5 bats tests, each seen failing first; restarting with `--check` kept the same signing keys | On the VM |
 | `om_sync.py` (glossary with typed relations, Sensitivity tags, every lake table) and `define_term` reading OpenMetadata: 9 acceptance tests (`pytest lakehouse/acceptance/test_om_sync.py`); an edit in OpenMetadata reached `define_term`, and `om_sync.py` put it back with the relations intact | On the VM |
 | Tags-to-masks loop (`cube/sync_masks.py`): 4 acceptance tests (`pytest lakehouse/acceptance/test_masks.py`) and 3 bats tests, each seen failing first; live, tagging `gender` Restricted in OpenMetadata masked it in Cube (`***` for all 100,000), and removing the tag restored the real values and a byte-identical model | On the VM |

@@ -126,6 +126,66 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 - [x] Move `handoff/publish.py` + `parity.py` (course 1's side of the VM handoff) into course 1, and point course 2's bootstrap, Dagster parity check, CI and tests at them; tag `course1-v1.2`
 - [ ] Run both enterprise tracks once on the agency workspace (nothing has run on Databricks yet)
 - [ ] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Today the MCP tools are described only in lakehouse/README.md (MCP section) and the server's docstrings.
+- [ ] Five new MCP tools: describe\_table, lineage, pipeline\_status, platform\_health, search\_incident\_reports (done 2026-11-04; architecture v3.3)
+- [ ] AI operating system and Lakehouse operating system model (wrolfgar, 2026-11-04). Scope not defined yet: ask wrolfgar what each model should cover before starting.
+
+## 2026-11-04 · Five new MCP tools; architecture v3.3
+
+**Result.** The MCP server has twelve tools: `describe_table`, `lineage`, `pipeline_status`, `platform_health` and `search_incident_reports` are new. All of them are read-only. The architecture is now **v3.3, as of 2026-11-04**. Acceptance passes 418 of 418, `lakehouse/tests` 229 of 229, and `checks.sh` 17 of 17.
+
+**Why.** wrolfgar asked whether there were new MCP tools we could create. I proposed five, and he said: "Do all the tools and update the docs. Notify me when complete."
+
+**What each tool stands on.**
+
+- `describe_table`: one table from OpenMetadata, read as mcp-reader. It gives the columns in order, with types, tags and glossary terms, and marks which are restricted and which are personal. It also names the products that deliver the table, its contract, and the Cube views that read it.
+- `lineage`: dbt's lineage now lives in OpenMetadata.
+  - `om_sync.py` publishes the manifest's parent\_map as 120 edges, each marked `DbtLineage`.
+  - It removes an edge dbt no longer has, and keeps one a steward drew by hand.
+  - The tool walks one level per call, because the API refuses depth over 3.
+  - For a metric, it starts from its views' tables. Every public Cube view now carries `meta.reads`; `tests/test_cube_reads.py` derives that list from the model so it can't drift.
+- `pipeline_status`: Dagster's GraphQL API, read queries only. A test fails if the word mutation ever appears in `server.py`.
+- `platform_health`: Prometheus, giving the sites, the scrape targets, the alerts firing with their runbooks, and the vitals.
+- `search_incident_reports`: a new dbt model, `world_gold.incident_report_redacted`.
+  - It covers all 200,000 reports. Each of the 1,893,406 details the mention key marks becomes `[PERSON NAME]`, `[ALIAS]`, `[SID]`, `[BIRTH DATE]` or `[PHONE]`, and there is no author column.
+  - Cube's new `incident_reports` view reads it, and the tool searches that view. No raw narrative reaches an agent.
+
+**TDD.**
+
+- 53 acceptance tests and 18 offline tests. Every one was seen failing first, and each is checked against a source the tool doesn't use: the lake, dbt's manifest, the model files, or Dagster and Prometheus asked directly.
+- 38 mutations were caught.
+- Two gaps were found and closed:
+  - A city filter of `contains` instead of `equals` passed. The test now checks that part of a city's name finds nothing.
+  - Dropping one character between mentions passed the S-world test. That test now rebuilds every report character for character.
+- One test fails `monitoring_selftest` on purpose and waits for `JobFailing`. That alert goes to the self-test topic, not the phone.
+
+**What went wrong (17:01 CST).**
+
+- I ran only the new offline test, then launched `daily_lake`. Its parity step runs all of `lakehouse/tests`.
+- `test_world_lake.py`'s guard (no `narrative` column in world gold) failed, and the run stopped at the load.
+- **JobFailing for daily\_lake reached wrolfgar's phone at 17:02 CST.**
+- The guard was narrowed: only the redacted table may have a narrative, and its redaction is now checked on the S world too.
+- The rerun succeeded and the alert resolved. The memory now says to run all of `lakehouse/tests` before launching `daily_lake`.
+
+**Also fixed.** Two README commands still read `.env` from the old clone path. They now use `~/lakehouse/lakehouse/.env`.
+
+**Counts that changed.**
+
+- CJIS tables go from 56 to 57: the redacted table is CJIS through lineage, and PII because the tagger sees its free text.
+- `test_mcp_tags.py` was updated to match.
+
+**Docs.**
+
+- `lakehouse/README.md`: the MCP section, the OpenMetadata lineage note, the world's gold tables, the reports section and the test table.
+- The Plan: the twelve tools, the v3.3 caption and the version table.
+- The drawing now shows MCP as "metrics, lineage, tags" and "jobs, health, reports", and OpenMetadata as "contracts, lineage".
+- The Handoff, both READMEs, and `docs/architecture.png`.
+- Git tag `arch-v3.3`.
+
+## 2026-11-04 · To-do added: AI and Lakehouse operating system models
+
+**Why.** wrolfgar: "Add to our to-do list: AI operating system and Lakehouse operating system model".
+
+**What we did.** Added it, in wrolfgar's words, to Up next and to the work-state list. Nothing started: what each model should cover waits for wrolfgar.
 
 ## 2026-11-04 · Every doc brought up to date
 

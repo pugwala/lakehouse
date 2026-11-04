@@ -392,3 +392,31 @@ models:
   - name: has_issues
     data_type: boolean
     description: Silver flagged something on this row (world_silver.exceptions says what).
+- name: wg_incident_report_redacted
+  description: The incident reports with every personal detail replaced (names, aliases, SIDs, birth dates, phones), built
+    one month at a time. What the MCP server's search_incident_reports searches, through Cube; never the raw narrative.
+  config:
+    alias: incident_report_redacted
+    contract:
+      enforced: true
+  columns:
+  - name: incident_report_id
+    data_type: bigint
+    data_tests:
+    - unique
+    - not_null
+  - name: incident_id
+    data_type: bigint
+    description: The fight the report is about (world_gold.fct_incident).
+  - name: report_kind
+    data_type: varchar
+    description: field report (a hero who was there), witness statement (a civilian) or desk report (the call as taken).
+  - name: filed_at
+    data_type: timestamp
+  - name: incident_month
+    data_type: date
+    description: First day of the fight's month; the Dagster partition. Null when the fight's date is unknown.
+  - name: narrative
+    data_type: varchar
+    description: What was written, each personal detail replaced by [PERSON NAME], [ALIAS], [SID], [BIRTH DATE] or
+      [PHONE]. Null when nothing was written.

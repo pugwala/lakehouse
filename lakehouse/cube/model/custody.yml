@@ -124,7 +124,7 @@ views:
       Custody population: who is held at each month-end, by unit, custody level and threat level. Count people
       with people_in_custody (distinct SIDs, never summed); records_in_custody counts open records.
       period_status says whether a month-end's numbers are final yet, waiting_on who they still wait for.
-    meta: {product: custody-population}
+    meta: {product: custody-population, reads: [gold.dim_unit, mart_custody.custody_snapshot_monthly, mart_readiness.period_readiness]}
     cubes:
       - join_path: custody_snapshot
         includes: [month_end, is_latest_month_end, unit_code, custody_level, threat_level, records_in_custody,
@@ -139,7 +139,7 @@ views:
       Custody offenses: what the custody population is held for at each month-end, by offense code, category
       and violence code. New sentences per month are in custody_admissions. period_status says whether a
       month-end's numbers are final yet, waiting_on who they still wait for.
-    meta: {product: custody-offenses}
+    meta: {product: custody-offenses, reads: [gold.dim_offense, mart_custody.custody_snapshot_monthly, mart_readiness.period_readiness]}
     cubes:
       - join_path: custody_snapshot
         includes: [month_end, is_latest_month_end, offense_code, offense_against, violence_code, records_in_custody,
@@ -153,7 +153,7 @@ views:
     description: >
       Custody admissions: new sentences by sentence date and offense. admissions counts records sentenced;
       people_admitted counts distinct people (SIDs).
-    meta: {product: custody-offenses}
+    meta: {product: custody-offenses, reads: [gold.dim_offense, gold.fct_offender_record]}
     cubes:
       - join_path: offender_records
         includes:
@@ -169,6 +169,7 @@ views:
         includes: [offense_description]
 
   - name: period_readiness
+    meta: {reads: [mart_readiness.period_readiness]}
     description: >
       Every data product's month-ends, final or provisional: a month is final once every business input the product
       depends on has closed it (lakehouse/products/inputs/, depends_on:), and waiting_on names who is still open.

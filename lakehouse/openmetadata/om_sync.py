@@ -6,12 +6,14 @@
 Sources, all in the repo or the lake:
     glossary/glossary.yml          terms, synonyms, typed relations, the columns and metrics each maps to
     dbt models/*.yml               table and column descriptions; meta.sensitivity (restricted or personal)
+    dbt target/manifest.json       lineage: what each model is built from, one OpenMetadata edge per parent
     the lake itself                every table, column and type, read through the read-only lake_ro connection
 OpenMetadata has no DuckLake connector, so this pushes the lake's tables as a CustomDatabase service named
 lakehouse (lakehouse.lake.<schema>.<table>). bootstrap.sh runs it; it needs OM_ADMIN_PASSWORD.
 """
 import base64
 import html
+import json
 import os
 import re
 import sys
@@ -92,7 +94,7 @@ class Sync:
         r = self.http.request(method, f"{OM}/{path}", json=body, timeout=60)
         if not r.ok:
             raise RuntimeError(f"{method} {path} ({what}): {r.status_code} {r.text[:400]}")
-        return r.json()
+        return r.json() if r.content else {}   # a lineage edge's PUT and DELETE answer with no body
 
     def patch(self, path, ops, what):
         """Record a difference; unless checking, send a JSON Patch (OpenMetadata's partial update) to path."""
@@ -349,6 +351,46 @@ def tables(s):
                       for c in e["columns"]]))
 
 
+LINEAGE_SOURCE = "DbtLineage"   # OpenMetadata's mark for edges from dbt; an edge with any other mark is a steward's
+
+
+def dbt_edges(present):
+    """{(parent, child)} from dbt's manifest (the one the tagger reads): every model's direct parents (models, seeds,
+    snapshots, sources), named schema.table as in the lake, where both ends are in present."""
+    m = json.loads(tagger.MANIFEST.read_text())
+    names = {uid: f"{n['schema']}.{n['alias']}" for uid, n in m["nodes"].items()
+             if n.get("resource_type") in ("model", "seed", "snapshot")}
+    names |= {uid: f"{n['schema']}.{n['identifier']}" for uid, n in m.get("sources", {}).items()}
+    return {(names[p], names[c]) for c, parents in m["parent_map"].items() if c in names
+            for p in parents if p in names and names[c] in present and names[p] in present and names[p] != names[c]}
+
+
+def lineage(s):
+    """dbt's table-to-table lineage in OpenMetadata: an edge (marked DbtLineage) from each parent to each table dbt
+    builds, and none dbt no longer has. Edges a steward drew by hand (any other mark) are left alone."""
+    present = {f"{schema}.{table}" for schema, table in lake_tables()}
+    want = dbt_edges(present)
+    entity = {}
+    for table in sorted(present):
+        e = s.get(f"tables/name/{SERVICE}.{DATABASE}.{table}")
+        if e is not None:
+            entity[table] = e["id"]
+    table_of = {i: t for t, i in entity.items()}
+    for table in sorted(entity):
+        got = s.get(f"lineage/table/name/{SERVICE}.{DATABASE}.{table}", upstreamDepth=1, downstreamDepth=0) or {}
+        have = {table_of.get(e["fromEntity"]): e for e in got.get("upstreamEdges") or []}
+        for parent in sorted(p for p, c in want if c == table and p in entity and p not in have):
+            s.write("PUT", "lineage", {"edge": {
+                "fromEntity": {"id": entity[parent], "type": "table"}, "toEntity": {"id": entity[table], "type": "table"},
+                "lineageDetails": {"source": LINEAGE_SOURCE, "description": f"dbt builds {table} from {parent}"}}},
+                f"lineage {parent} -> {table}")
+        for parent, e in sorted(have.items(), key=lambda x: str(x[0])):
+            mark = (e.get("lineageDetails") or {}).get("source")
+            if mark == LINEAGE_SOURCE and (parent, table) not in want:
+                s.write("DELETE", f"lineage/table/{e['fromEntity']}/table/{e['toEntity']}", None,
+                        f"lineage {parent} -> {table} removed (dbt no longer has it)")
+
+
 def product_descriptors():
     """The data products' descriptors (lakehouse/products/*.yml) and their domains (products/domains/*.yml)."""
     folder = LAKEHOUSE / "products"
@@ -438,7 +480,7 @@ def products(s):
 def main(argv):
     """Sync (or --check) everything; print what differed and a summary line."""
     s = Sync(check="--check" in argv)
-    for step in (relation_types, sensitivity, tag_vocabulary, custom_properties, glossary, tables, products):
+    for step in (relation_types, sensitivity, tag_vocabulary, custom_properties, glossary, tables, lineage, products):
         step(s)
     for what in s.drift:
         print(f"  {'differs' if s.check else 'updated'}: {what}")

@@ -1,6 +1,7 @@
 # The data-quality scorecard from gold: one row per dimension x column x rule for the latest load.
 cubes:
   - name: dq_scorecard
+    meta: {reads: [gold.dq_scorecard]}
     sql_table: lake.gold.dq_scorecard
     description: Data-quality scores for the latest load (gold.dq_scorecard).
 

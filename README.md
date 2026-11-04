@@ -23,7 +23,7 @@ git clone --recurse-submodules https://github.com/pugwala/lakehouse.git ~/lakeho
 bash ~/lakehouse/lakehouse/scripts/bootstrap.sh
 ```
 
-**Architecture v3.2, as of 2026-11-03** ([the drawing](docs/architecture.png), git tag `arch-v3.2`), versioned major.minor
+**Architecture v3.3, as of 2026-11-04** ([the drawing](docs/architecture.png), git tag `arch-v3.3`), versioned major.minor
 like course 1's tags; [the Plan](docs/lakehouse-plan.md#architecture-versions) lists every version.
 
 ## Where to start

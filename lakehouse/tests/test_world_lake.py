@@ -11,6 +11,7 @@ ref.nibrs_offenses and silver.hero_offenders' keys and sentence dates. The tests
   - every messy row lands in bronze and in silver, nothing dropped;
   - silver finds the duplicate people and the out-of-order dates the key lists (its precision and recall);
   - gold keeps names and birth dates out, and its facts hold every silver row;
+  - gold's incident reports have every detail the mention key marks replaced by its label, and nothing else changed;
   - a month rebuilt on its own (vars world_from/world_to, as a Dagster partition runs it) gives the same rows;
   - silver keeps every incident report's narrative exactly as written, so the mention key's places hold there.
 """
@@ -112,9 +113,12 @@ def test_silver_finds_the_duplicate_people_and_out_of_order_dates(world):
 
 
 def test_gold_keeps_personal_data_out_and_its_facts_hold_every_silver_row(world):
-    """No names or birth dates in gold; one gold person per resolved person; facts row for row with silver."""
-    cols = {r[0] for r in query(world, "SELECT column_name FROM information_schema.columns WHERE table_schema = 'world_gold'")}
-    assert not cols & {"last_name", "first_name", "alias", "birth_date", "codename", "narrative"}
+    """No names or birth dates in gold, and no narrative but the redacted one (incident_report_redacted, checked
+    below); one gold person per resolved person; facts row for row with silver."""
+    cols = {(r[0], r[1]) for r in query(world, "SELECT table_name, column_name FROM information_schema.columns "
+                                                "WHERE table_schema = 'world_gold'")}
+    assert not {c for _, c in cols} & {"last_name", "first_name", "alias", "birth_date", "codename"}
+    assert {t for t, c in cols if c == "narrative"} == {"incident_report_redacted"}
     assert one(world, "SELECT count(*) FROM world_gold.dim_person") == one(
         world, "SELECT count(DISTINCT person_key) FROM world_silver.person")
     for fact, table in [("fct_incident", "incident"), ("fct_participation", "participant"), ("fct_power_use", "power_use"),
@@ -156,3 +160,35 @@ def test_a_month_rebuilt_alone_gives_the_same_rows(world):
                                OR (incident_month >= DATE '{MONTH[0]}' AND incident_month < DATE '{MONTH[1]}')""")
         written = one(world, f"SELECT count(*) FROM world_silver.{t} WHERE _partition = '{MONTH[0]}'")
         assert written == owned < totals[t], (t, written, owned)
+
+
+def test_gold_reports_replace_every_marked_detail(world):
+    """world_gold.incident_report_redacted: every silver report, one label per mention, no marked detail left in its
+    report, and a report the key marks nothing in exactly as silver has it."""
+    assert one(world, "SELECT count(*) FROM world_gold.incident_report_redacted") == one(
+        world, "SELECT count(*) FROM world_silver.incident_report")
+    labels = one(world, "SELECT sum(len(regexp_extract_all(narrative, '\\[(PERSON NAME|ALIAS|SID|BIRTH DATE|PHONE)\\]'))) "
+                        "FROM world_gold.incident_report_redacted")
+    assert labels == one(world, "SELECT count(*) FROM read_parquet('$root/mention_key/incident_report/*.parquet')") > 0
+    assert one(world, """SELECT count(*) FROM read_parquet('$root/mention_key/incident_report/*.parquet') m
+                         JOIN world_gold.incident_report_redacted g USING (incident_report_id)
+                         WHERE contains(g.narrative, m.as_written)""") == 0
+    assert one(world, """SELECT count(*) FROM world_silver.incident_report s
+                         JOIN world_gold.incident_report_redacted g USING (incident_report_id)
+                         WHERE s.incident_report_id NOT IN (SELECT incident_report_id
+                               FROM read_parquet('$root/mention_key/incident_report/*.parquet'))
+                           AND s.narrative IS DISTINCT FROM g.narrative""") == 0
+    labels = {"person_name": "[PERSON NAME]", "alias": "[ALIAS]", "sid": "[SID]", "birth_date": "[BIRTH DATE]",
+              "phone": "[PHONE]"}
+    spans = {}
+    for rid, start, end, kind in query(world, "SELECT incident_report_id, start_pos, end_pos, kind "
+                                              "FROM read_parquet('$root/mention_key/incident_report/*.parquet')"):
+        spans.setdefault(rid, []).append((start, end, kind))
+    silver = dict(query(world, "SELECT incident_report_id, narrative FROM world_silver.incident_report"))
+    gold = dict(query(world, "SELECT incident_report_id, narrative FROM world_gold.incident_report_redacted"))
+    for rid, marks in spans.items():   # character for character, as the rule reads in plain Python
+        out, at = [], 0
+        for start, end, kind in sorted(marks):
+            out += [silver[rid][at:start], labels[kind]]
+            at = end
+        assert gold[rid] == "".join(out) + silver[rid][at:], rid
