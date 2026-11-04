@@ -75,7 +75,7 @@ case "$*" in
   *"grafana/set_home.py"*)                   echo "Grafana home: Home Lakehouse"; exit 0 ;;
   *"superset/dashboards.py"*)                 echo "Superset dashboards (Trust Test, Custody): in place"; exit "$FAKE_DASH_EXIT" ;;
   *"handoff.receive check"*)                [ "$FAKE_HANDOFF_EXIT" = 0 ] && echo "v2 matches the lock" || echo "silver.hero_offenders (silver.hero_offenders.parquet): missing"; exit "$FAKE_HANDOFF_EXIT" ;;
-  *"handoff.publish"*)                      echo "Published v2 to /lake/landing/handoff/course1/v2: 13 tables, 19 of 19 numbers match" ;;
+  *"lnl.publish --out \"\$(python -m lakehouse.handoff.receive where)\""*) echo "Published v2 to /lake/landing/handoff/course1/v2: 13 tables, 19 of 19 numbers match" ;;
   *"exec -T jupyter python"*)                cat >/dev/null; echo "$FAKE_HAVE_DATA" ;;
   *pytest*)                                  echo "19 passed in 0.10s" ;;
   *"run --rm load-lake"*)                    echo "Loaded run fake: 100,000 silver rows" ;;
@@ -343,15 +343,15 @@ set_env()       { sed -i "/^$1=/d" "$ENV"; [ $# = 1 ] || echo "$1=$2" >> "$ENV";
   run_bootstrap
   [ "$status" -eq 0 ]
   [[ $output == *"19 of 19 numbers match"* ]]
-  called "handoff.publish"
-  [ "$(grep -n -- 'handoff.publish' "$FAKE_LOG" | head -1 | cut -d: -f1)" -lt "$(grep -n -- 'run --rm load-lake' "$FAKE_LOG" | head -1 | cut -d: -f1)" ]
+  called "lnl.publish"
+  [ "$(grep -n -- 'lnl.publish' "$FAKE_LOG" | head -1 | cut -d: -f1)" -lt "$(grep -n -- 'run --rm load-lake' "$FAKE_LOG" | head -1 | cut -d: -f1)" ]
 }
 
 @test "leaves a pinned handoff that's already there alone" {
   run_bootstrap
   [ "$status" -eq 0 ]
   [[ $output == *"course 1's handoff is the pinned version"* ]]
-  not_called "handoff.publish"
+  not_called "lnl.publish"
 }
 
 @test "with course 1's add-on off, session 7's model isn't staged" {
@@ -368,7 +368,7 @@ set_env()       { sed -i "/^$1=/d" "$ENV"; [ $# = 1 ] || echo "$1=$2" >> "$ENV";
   run_bootstrap --check
   [ "$status" -eq 1 ]
   [[ $output == *"course 1's handoff is missing or changed"* ]]
-  not_called "handoff.publish"
+  not_called "lnl.publish"
 }
 
 @test "--check changes nothing, even when something needs fixing" {

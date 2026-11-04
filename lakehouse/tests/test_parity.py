@@ -13,8 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "course1"))   # course 1 (lnl), the pinned submodule
 
 from lakehouse import lake  # noqa: E402
-from lakehouse.handoff import parity  # noqa: E402
-from lnl import config  # noqa: E402
+from lnl import config, parity  # noqa: E402
 
 pytestmark = pytest.mark.skipif((config.ROWS, config.SEED) != (100_000, 2026),
                                 reason="expected numbers are for the default 100,000 rows, seed 2026")
@@ -38,7 +37,7 @@ def test_bronze_holds_every_record(con):
 
 @pytest.mark.parametrize("name, measure, expected", parity.CHECKS, ids=[c[0] for c in parity.CHECKS])
 def test_the_lake_matches_the_course(con, name, measure, expected):
-    """One of the 19 numbers the class sees (lakehouse/handoff/parity.py: unmapped codes and failed conversions per
+    """One of the 19 numbers the class sees (course1/lnl/parity.py: unmapped codes and failed conversions per
     column, conflicts, flagged birth dates, restitution to the cent, Confirmed STG records, the Trust Test), measured
     on the lake's silver tables. The handoff's publish step runs the same 19 on its files."""
     assert measure(con) == expected

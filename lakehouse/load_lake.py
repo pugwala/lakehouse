@@ -4,7 +4,7 @@
 
 Lands the version pinned in lakehouse/handoff/course1.lock.json from HANDOFF_ROOT (default
 /lake/landing/handoff/course1), after checking every file. To change the data, course 1 publishes a new version
-(python -m lakehouse.handoff.publish) and course 2 adopts it (python -m lakehouse.handoff.receive adopt DIR).
+(python -m lnl.publish --out DIR) and course 2 adopts it (python -m lakehouse.handoff.receive adopt DIR).
 Reads LAKE_CATALOG and LAKE_DATA_PATH from the environment (see lakehouse/.env.example).
 Prints the run's metrics as JSON on the last line, for the scheduler and Pushgateway to pick up.
 """

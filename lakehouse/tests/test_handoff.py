@@ -1,4 +1,4 @@
-"""Course 1's side of the handoff (lakehouse/handoff/publish.py): its cleansed output, published as pinned files.
+"""Course 1's side of the handoff (course1/lnl/publish.py): its cleansed output, published as pinned files.
 
     pytest lakehouse/tests/test_handoff.py      # inside the jupyter container
 
@@ -16,8 +16,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "course1"))   # course 1 (lnl), the pinned submodule
 
-from lakehouse.handoff import parity, publish, receive  # noqa: E402
-from lnl import config, domains  # noqa: E402
+from lakehouse.handoff import receive  # noqa: E402
+from lnl import config, domains, parity, publish  # noqa: E402
 
 pytestmark = pytest.mark.skipif((config.ROWS, config.SEED) != (100_000, 2026),
                                 reason="the 19 numbers and the lock are for the default 100,000 rows, seed 2026")
@@ -87,9 +87,44 @@ def test_a_fresh_publish_matches_the_pinned_lock(published):
 
 
 def test_course_1_publishes_the_pinned_version_by_default():
-    """publish.py's default version is the one course 2 pinned, so a fresh install (bootstrap.sh) that publishes
-    with no arguments makes exactly the files the lock names."""
+    """Course 1's default version is the one course 2 pinned, and receive.py says where course 2 looks for it, so a
+    fresh install (bootstrap.sh: python -m lnl.publish --out "$(python -m lakehouse.handoff.receive where)") makes
+    exactly the files the lock names, where the lock expects them."""
     assert publish.VERSION == receive.read_lock()["version"]
+    assert receive.pinned_dir() == receive.ROOT / publish.VERSION
+
+
+def test_receive_says_where_the_pinned_version_lives(capsys):
+    """python -m lakehouse.handoff.receive where: the pinned version's folder, alone on its line."""
+    assert receive.main(["where"]) == 0
+    assert capsys.readouterr().out == f"{receive.pinned_dir()}\n"
+
+
+def test_course_1_owns_its_side_of_the_handoff():
+    """publish and parity live in course 1 (course1/lnl, Priority 8 follow-up, course1-v1.2); course 2 keeps only its
+    own side (receive.py, the contract, the lock). Course 1's code imports nothing from course 2."""
+    import ast
+    repo = Path(__file__).resolve().parents[2]
+    assert not (repo / "lakehouse" / "handoff" / "publish.py").exists()
+    assert not (repo / "lakehouse" / "handoff" / "parity.py").exists()
+    for module in (publish, parity):
+        path = Path(module.__file__)
+        assert path.parent == repo / "course1" / "lnl", path
+        for node in ast.walk(ast.parse(path.read_text())):
+            names = ([a.name for a in node.names] if isinstance(node, ast.Import)
+                     else [node.module or ""] if isinstance(node, ast.ImportFrom) and not node.level else [])
+            assert not any(n.split(".")[0] == "lakehouse" for n in names), (path.name, names)
+
+
+def test_course_1_publishes_from_the_command_line(tmp_path, monkeypatch, capsys):
+    """python -m lnl.publish --out DIR [--version V]: publishes (here with a stand-in for the slow part) and says
+    so; with no --out it refuses, since course 1 doesn't know where course 2 keeps its handoffs."""
+    monkeypatch.setattr(publish, "publish", lambda out, version: {"tables": {"a": 1}, "parity": {"passed": 19,
+                                                                                               "checks": 19}})
+    assert publish.main(["--out", str(tmp_path / "v9"), "--version", "v9"]) == 0
+    assert capsys.readouterr().out == f"Published v9 to {tmp_path / 'v9'}: 1 tables, 19 of 19 numbers match\n"
+    with pytest.raises(SystemExit):
+        publish.main([])
 
 
 def test_the_course_generator_still_makes_the_pinned_source(tmp_path):

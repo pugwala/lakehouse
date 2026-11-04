@@ -14,9 +14,11 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "course1"))   # course 1 (lnl), the pinned submodule
 
 from lakehouse import lake  # noqa: E402
-from lakehouse.handoff import parity, receive  # noqa: E402
+from lakehouse.handoff import receive  # noqa: E402
+from lnl import parity  # noqa: E402
 from test_universe import code_lines  # noqa: E402
 
 pytestmark = pytest.mark.skipif(not receive.pinned_dir().exists(), reason="no published handoff here")

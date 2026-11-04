@@ -144,12 +144,17 @@ def adopt(handoff_dir: Path) -> dict:
 
 
 def main(argv=None) -> int:
-    """Command line: adopt a published version, or check the pinned one."""
+    """Command line: adopt a published version, check the pinned one, or say where the pinned one lives (the folder
+    bootstrap.sh hands course 1's publish step: python -m lnl.publish --out "$(... receive where)")."""
     ap = argparse.ArgumentParser(description="Course 2's side of the handoff from course 1.")
     sub = ap.add_subparsers(dest="command", required=True)
     sub.add_parser("adopt", help="check a published version and pin it").add_argument("folder", type=Path)
     sub.add_parser("check", help="check the pinned version's files against the lock")
+    sub.add_parser("where", help="print the folder the pinned version lives in")
     args = ap.parse_args(argv)
+    if args.command == "where":
+        print(pinned_dir())
+        return 0
     if args.command == "adopt":
         m = adopt(args.folder)
         print(f"Adopted {m['version']}: {len(m['tables'])} tables keep the contract; pinned in {LOCK}")

@@ -17,10 +17,10 @@ cleansing the class uses, so every number matches the Facilitator Guide. dbt bui
 | `jupyter/Dockerfile` | `pyspark-notebook` + course requirements + DuckDB 1.5.6, dbt-duckdb, Dagster; extensions pre-installed. One image for every Python process, so DuckDB versions never drift |
 | `lake.py` | Helpers: `lake_connect()`, `lake_ro_connect()`, `run()` (lands course 1's pinned handoff; runs none of course 1's code) |
 | `tagging/` | Automatic governance and metadata tags as data lands: `sources.yml` (each ingested source, its governance, system and refresh), `rules.yml` (the tag vocabulary and the column rules), `tags.py` (the tagger; writes `ops.table_tags` and `ops.column_tags`) |
-| `handoff/` | The handoff from course 1 to course 2: `publish.py` and `parity.py` (course 1's side: its generator and sessions 2-4, published once the 19 numbers match), `receive.py`, `contract.yml` and `course1.lock.json` (course 2's side: what it accepts, the pinned version, checked before anything is built on it) |
+| `handoff/` | The handoff from course 1 to course 2: `receive.py`, `contract.yml` and `course1.lock.json` (course 2's side: what it accepts, the pinned version, checked before anything is built on it). Course 1's side, `lnl/publish.py` and `lnl/parity.py`, is in `course1/` |
 | `sql_magic.py` | `%load_ext lakehouse.sql_magic`: jupysql's `%sql` on the lake, read-only as `lake_ro` |
 | `load_lake.py` | Lands course 1's pinned handoff as reference, bronze and silver, one DuckLake snapshot |
-| `tests/test_parity.py` | 19 checks that the lake matches the Facilitator Guide's numbers (`handoff/parity.py`), plus bronze's row count |
+| `tests/test_parity.py` | 19 checks that the lake matches the Facilitator Guide's numbers (course 1's `lnl/parity.py`), plus bronze's row count |
 | `dbt/` | Gold models and tests (dbt-duckdb, attaches DuckLake), and the expanded world's bronze, silver and gold (`models/world`, tag `world`) |
 | `orchestration/` | Dagster definitions and instance config |
 | `scripts/set-dagster-ui-password.sh` | Puts a login in front of the Dagster UI (it has none of its own) |
@@ -118,8 +118,8 @@ What it does, in order:
    `postgres/init/` only on an empty volume), generates OpenMetadata's own JWT signing keys once (under
    `/lake/openmetadata/keys`, never in the repo), starts the twenty-two long-running services by name, reloads Caddy, makes Prometheus and Alertmanager reread
    their config (SIGHUP), and restarts Dagster if catalog-pg was recreated (its pooled connections would be dead).
-6. **Lake data and meaning.** Publishes course 1's pinned handoff if it isn't there yet (`handoff/publish.py`: the
-   same bytes as the lock), runs the loader if silver or `ref.null_tokens` is missing, stages session 7's model,
+6. **Lake data and meaning.** Publishes course 1's pinned handoff if it isn't there yet (course 1's `lnl/publish.py`, into the folder
+   `receive where` names: the same bytes as the lock), runs the loader if silver or `ref.null_tokens` is missing, stages session 7's model,
    replaces OpenMetadata's default admin password, runs `om_sync.py`, `om_to_rdf.py` (Fuseki's graphs), `ontology/check_rules.py` (the business rules), then
    `cube/sync_masks.py` (restarting Cube if the masks changed), builds the Trust Test (with course 1's add-on on) and Custody dashboards, and
    makes Home Lakehouse Grafana's home page.
@@ -624,9 +624,9 @@ the SHACL shapes and dbt's tests pick it up on their own.
 ## Course 1, the pinned submodule
 
 Course 2 has its own repo, `pugwala/lakehouse` (Priority 8, 2026-11-03). Course 1 is not copied into it: it is the
-git submodule `course1/`, which is `pugwala/homelake` at the tag `course1-v1.1` (its `main`: sessions 1 to 7, `lnl`,
-the generator, the notebooks, the Facilitator Guide, and the enterprise track up to its pipeline). Only the course 1 side of the handoff
-(`handoff/publish.py`, `parity.py`) and course 1's add-on run that code, and they find it there. Course 2's own
+git submodule `course1/`, which is `pugwala/homelake` at the tag `course1-v1.2` (its `main`: sessions 1 to 7, `lnl`,
+the generator, the notebooks, the Facilitator Guide, and the enterprise track up to its pipeline). Only course 1's side of the handoff
+(`course1/lnl/publish.py` and `parity.py`, course 1's own since `course1-v1.2`) and course 1's add-on run that code, and they find it there. Course 2's own
 code, `lake.py` and `universe/` among it, imports none of it.
 
 - **Cloning:** `git clone --recurse-submodules`. A plain clone leaves `course1/` empty, and a pull that moves the
@@ -648,11 +648,11 @@ Course 1 is the cleansing course: sessions 1 to 7, ending with "Meaning Over Wor
 architecture, and it starts from course 1's **cleansed output** (the boundary document, 2026-11-02). The two meet
 through files, never shared code or live tables:
 
-1. **Course 1 publishes** (`python -m lakehouse.handoff.publish --version v2`). It runs its own code (the
+1. **Course 1 publishes** (`python -m lnl.publish --out "$(python -m lakehouse.handoff.receive where)"`, from `course1/lnl/`). It runs its own code (the
    generator, then sessions 2 to 4) and writes one Parquet file per table: what it received (bronze: the raw file and
    its conduct-notes answer key, as text), what it made of it (silver: the cleansed records, every flagged value, the
    answer key, the Trust Test) and the reference data (seven tables). It checks the 19 Facilitator Guide numbers on
-   those files, read the way course 2 will read them. Only when all 19 match does the folder appear, with a manifest
+   those files, read back as Parquet. Only when all 19 match does the folder appear, with a manifest
    of every file's row count and SHA-256; a miss publishes nothing. It takes 6 s.
 2. **Course 2 adopts a version on purpose** (`python -m lakehouse.handoff.receive adopt <folder>`). The files must
    match their manifest and keep **the contract**, `handoff/contract.yml`: every table, its description, its key
@@ -1074,6 +1074,7 @@ checks on a GitHub runner in about 2.5 minutes.
 | Incident reports, the free text (`universe/reports.py`, the mention key, the world's bronze and silver, the Incident Report term): 13 tests in `test_universe_reports.py`, 1 more in `test_world_lake.py` and the reports' checks in `test_world_meaning.py`, all seen failing first; 15 mutations all caught. Live at M: 200,000 reports, 1,893,406 mentions, every one at its place in silver; the tagger tags the narrative free text on its own | On the VM |
 | Scale-up and benchmarks (`universe/bench.py`: a scale end to end in a scratch DuckLake, never the live one): 8 tests in `test_universe_bench.py`, all seen failing first; 13 mutations all caught. Run at M and L: L (65.6M rows) built in 164 s at a 27.6 GB peak, dbt in 44 s with every answer-key test passing, every benchmark query under 0.3 s | On the VM |
 | The enterprise track split at the boundary (`course1-v1.1`): course 1 keeps 00, 01 and 02 sections 1-4 and hands the next deliveries over with a fingerprinted manifest; course 2's `enterprise/` has its own helpers, 00, 02b, 03, 04, 05, the quality task and a job-only bundle. 14 tests in `test_enterprise_track.py` (the handoff run for real on a stand-in volume), all seen failing first; 16 mutations caught. Not run on Databricks | On the VM |
+| Course 1's side of the VM handoff moved into course 1 (`course1-v1.2`): `lnl/publish.py` and `lnl/parity.py`, with no course 2 imports; bootstrap and CI publish with `python -m lnl.publish --out "$(python -m lakehouse.handoff.receive where)"`, and the lake's parity gate runs course 1's checks. 3 new tests in `test_handoff.py`, the rest repointed, all seen failing first; 14 mutations caught; a fresh publish is still byte-identical to the lock | On the VM |
 | Course 2's own repo with course 1 as the pinned submodule `course1/`: 4 tests in `test_course1_pin.py`, 1 in `acceptance/test_course1_tag.py`, 4 bats tests, all seen failing first; 16 mutations caught. `ci/checks.sh` 17 of 17 on the new layout (course 1's handoff, published from the submodule, matches the lock byte for byte) | On the VM and GitHub |
 
 ## Next phases

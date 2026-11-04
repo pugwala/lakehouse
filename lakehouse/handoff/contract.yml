@@ -1,13 +1,13 @@
 # The contract for course 1's handoff to course 2: what course 2 accepts (lakehouse/handoff/receive.py).
 #
-# Course 1 publishes its output as one Parquet file per table (publish.py). Before course 2 pins a version
+# Course 1 publishes its output as one Parquet file per table (course1/lnl/publish.py). Before course 2 pins a version
 # (receive.adopt), every table here must be there, with exactly these columns, in this order, of these
 # types, and its key must be unique and never empty. Course 1 also proves the 19 Facilitator Guide numbers
-# on the files before publishing (parity.py); those are the contract's acceptance checks.
+# on the files before publishing (course1/lnl/parity.py); those are the contract's acceptance checks.
 #
 # Changing this file is a decision for both courses: course 1 changes what it hands over, course 2 what it
 # accepts. Columns and types were taken from version v2 (2026-11-02).
-acceptance_checks: lakehouse/handoff/parity.py (the 19 Facilitator Guide numbers)
+acceptance_checks: course1/lnl/parity.py (the 19 Facilitator Guide numbers)
 tables:
   bronze.conduct_notes_answer_key:
     description: "The true sentiment of each conduct note, as written (text). For scoring the text sessions only."

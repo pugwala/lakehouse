@@ -3,7 +3,7 @@
 Course 2 (this lakehouse) starts where course 1 (the cleansing course) ends: course 1 publishes its cleansed output
 as pinned files (lakehouse/handoff), and run() lands the pinned version as it is, after checking every file against
 the lock. Nothing here runs course 1's code: its generator and sessions 2-4 run on course 1's side, in
-lakehouse/handoff/publish.py, which only publishes when the 19 Facilitator Guide numbers match. So the lakehouse and
+course1/lnl/publish.py, which only publishes when the 19 Facilitator Guide numbers match. So the lakehouse and
 the class still agree on every standardized value.
 
 Where the lake lives comes from two environment variables:
