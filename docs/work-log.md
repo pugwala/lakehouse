@@ -135,6 +135,8 @@ cd ~/lakehouse/lakehouse && docker compose --profile core exec -T jupyter pytest
 
 **The version.** Architecture v3.3, as of 2026-11-04, matches everywhere: the drawing, the Plan's version table, `docs/architecture.png`, git tag `arch-v3.3`, both READMEs, the Handoff and the how-to doc. Chunk 11 and the how-to doc don't change it, because teaching material and documents aren't components.
 
+**Pushed.** pugwala/lakehouse 88c85d1 (README counts, every snapshot) and 7c2419a (the Handoff's "As of" had been written as 19:45 CST at 19:36; now 19:40, the real time). Both CI workflows green. homelake and the old repo have nothing to push (only Python cache files are untracked).
+
 **What was out of step, now fixed.**
 
 - **The course README.**
