@@ -128,6 +128,32 @@ cd ~/lakehouse/lakehouse && docker compose --profile core exec -T jupyter pytest
 - [x] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Done 2026-11-04: How to Use the Home Lakehouse, with all twelve MCP tools and their real answers (snapshot docs/how-to.md).
 - [x] Five new MCP tools: describe\_table, lineage, pipeline\_status, platform\_health, search\_incident\_reports (done 2026-11-04; architecture v3.3)
 - [ ] AI operating system and Lakehouse operating system model (wrolfgar, 2026-11-04). Scope not defined yet: ask wrolfgar what each model should cover before starting.
+- [ ] Python mini-course between course 1 and course 2 (wrolfgar, 2026-11-04): the Python behind course 1's cleaning, for students completely new to Python, value first and then the how. Part 0 (Open the Box) built 2026-11-04, homelake c4a2150; part 1 (strings) waits on wrolfgar's go.
+
+## 2026-11-04 · Python mini-course, part 0: Open the Box
+
+**Result.** The first notebook of the Python mini-course is in homelake (`python/00_open_the_box.ipynb`, c4a2150): students open course 1's one line, `cleaning.session2(df)`, into its six steps and run them by hand. They write no code yet.
+
+**Why.** wrolfgar: "yes", to building the opener first. Students are new to Python, so it starts from the value they already saw and only then shows the how.
+
+**What we found.** Run one at a time on the course data, the six steps give exactly what `session2()` gives, in the same row order. Step 1 makes 77,734 nulls, step 3 makes 6,122 more (the data dictionary's codes), step 5 adds three `_std` name columns, step 6 adds 11 coded columns. Session 2 keeps every original value: the cleaned versions are new columns (`CAStillO` stays; `last_name_std` is `CASTILLO`). My first draft said "names were tidied", which was wrong, so the side-by-side now shows the new columns too.
+
+**What we did.**
+
+- `lnl/inside.py`: `show` (a function's code, numbered), `recipe` (its steps by name), `what_changed` and `report` (what one step did, in plain English), `side_by_side` (the most-changed record, before and after), `same_table`.
+- `lnl/check.py`: `p0_ex1` to `p0_ex3`, graded against the course data. A number typed with a comma (Python reads `77,734` as two numbers) gets its own hint.
+- `python/README.md` (outline of parts 0 to 5 and what the room should see), plus sections in the README and the Facilitator Guide.
+- Lives in its own `python/` folder, so course 2's weekly smoke run of `notebooks/0*.ipynb` is unaffected. Course 2 stays pinned at `course1-v1.3`: no new tag yet.
+
+**What verified it.** `tests/test_python_course.py`, 22 passed, run in the course's Jupyter image with no Databricks. That includes the notebook run top to bottom with its blanks in place (every check asks) and with its answers filled in (every check passes). Red first; 12 deliberate breaks caught, after adding one test for row labels named differently, which `DataFrame.equals` ignores. Leak grep 0, tieback clean.
+
+## 2026-11-04 · A Python mini-course, between course 1 and course 2
+
+**Why.** wrolfgar: "I'm thinking about adding a mini-course on teaching the python that drives all the data cleansing in course 1." Then: most students are completely new to Python, it sits between course 1 and course 2 for now, and "I need them to see the value and then learn the how."
+
+**What we found.** The cleaning in course 1 is about 1,100 lines of pandas and `re` in five files of `lnl/` (cleaning, dates, conversions, domains, text). Students call it one line per session (`session2(df)`) and never see inside. The rest of `lnl/` is setup and handoff, not cleaning.
+
+**Decided.** Students are beginners, so each session opens on a course 1 result they already saw, then teaches only the Python needed to rebuild it. Exercises are graded against the real `lnl` functions on the course data, so the course can't drift from the code. It lives in course 1's repo (homelake). Text (sessions 6 and 7) waits for a later part. Outline proposed in chat; nothing built yet.
 
 ## 2026-11-04 · Every doc brought into step
 
