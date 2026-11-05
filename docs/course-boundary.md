@@ -43,7 +43,7 @@ Course 2 gets the rest of the enterprise track and the whole lakehouse.
 | `lakehouse/` | The home lakehouse: DuckLake, dbt, Dagster, Cube, Superset, OpenMetadata, Fuseki, MCP, monitoring |
 | `lakehouse/universe` | The expanded world's generator and its mess (fights, damage, courts, people) |
 
-Sessions 6 and 7's text work stays in course 1. Course 2's free text (`incident_report`) is new, for the world.
+Sessions 6 and 7's text work stays in course 1. Course 2's free text (`incident_report`) is new, for the world. Since 2026-11-04 course 2 has its own sessions on it: world session 4 finds the names in it for redaction (lakehouse/sessions/).
 
 ## The handoff
 
@@ -67,9 +67,9 @@ Course 2 starts from a frozen, versioned copy of course 1's cleansed output. Cou
 
 What changes today: course 1's pandas pipeline leaves course 2's daily run. It runs on course 1's side, once per release.
 
-## Today's couplings
+## The couplings, all removed
 
-Six ties connect course 2 to course 1 today; priorities 2, 3, 4 and 8 remove them. The dependency already runs one way only: course 1 never imports the lakehouse, and its files match `main`.
+On 2026-11-02 six ties connected course 2 to course 1. Priorities 2, 3, 4 and 8 removed all six by 2026-11-03, and the table below records how. The dependency runs one way only: course 1 never imports the lakehouse, and course 2 reads course 1 only through its pinned, checked handoff.
 
 | Coupling today | Where | Removed by |
 | --- | --- | --- |
@@ -84,7 +84,14 @@ Six ties connect course 2 to course 1 today; priorities 2, 3, 4 and 8 remove the
 
 **Automatic governance tags at ingestion.** When a data source is ingested, course 2 should show how to attach governance tags automatically (CJIS, PII and so on). It should also add other metadata tags that make data easier for end users to search, parse and organize. wrolfgar raised this on 2026-11-02.
 
-Today it's all manual. Each sensitive column is marked by hand in dbt (`meta.sensitivity`: restricted or personal). `om_sync.py` pushes those marks to OpenMetadata as tags, and the tags decide which Cube columns are masked. The controls downstream are automatic; the tagging at the start is not.
+**Built 2026-11-02 (Priority 4b).** `lakehouse/tagging/` tags every table and column as data lands:
+
+- default tags for each source, registered once in `sources.yml` (a source registered as CJIS, for example);
+- personal data found by name and by a sample of values, in `rules.yml`;
+- tags that follow dbt's lineage into gold;
+- the families that help people find data: Source, Layer and Refresh.
+
+`om_sync.py` publishes the tags to OpenMetadata. The hand marks in dbt (`meta.sensitivity`: restricted or personal) still decide which Cube columns are masked. On 2026-11-04 the tagger covers 57 CJIS tables, 29 with personal data and 89 personal columns. The ideas below were the ways to teach it.
 
 Ways to teach it:
 
@@ -102,6 +109,6 @@ wrolfgar asked Claude to decide these on 2026-11-02; any of them can be reversed
 - [x] **`02_pipeline`: split at section 5.** Sections 1–4 stay in course 1; incremental loads and schema drift go to course 2. A pipeline that enforces course 1's own rules is the "simple pipeline"; handling the next delivery is operations.
 - [x] **`00_preflight`: trim it** to the checks 01 and 02 need. The job, alert and system-table checks move with 04 and 05.
 - [x] **`extras/`: course 1, as a bonus exercise.** It practises session 4's type conversion on a new file and needs no architecture. This reverses the first call (course 2); say so if you want it back.
-- [x] **Move the course 2 notebooks: done 2026-11-03** (`course1-v1.1`). Course 1 keeps `00_preflight` (trimmed), `01_unity_catalog` and `02_pipeline` sections 1–4. 02 now ends by handing the next two deliveries over in a handoff folder of the volume, with a fingerprinted manifest. Course 2's `enterprise/` has 00, 02b (02's old §5), 03, 04, 05, the quality task and a job-only bundle, with its own helpers: Databricks Git folders may not check out the `course1/` submodule, so nothing there imports course 1's code or runs its generator. Still on course 1's side of the repo boundary but living in course 2: `handoff/publish.py` and `parity.py`, which move next.
+- [x] **Move the course 2 notebooks: done 2026-11-03** (`course1-v1.1`). Course 1 keeps `00_preflight` (trimmed), `01_unity_catalog` and `02_pipeline` sections 1–4. 02 now ends by handing the next two deliveries over in a handoff folder of the volume, with a fingerprinted manifest. Course 2's `enterprise/` has 00, 02b (02's old §5), 03, 04, 05, the quality task and a job-only bundle, with its own helpers: Databricks Git folders may not check out the `course1/` submodule, so nothing there imports course 1's code or runs its generator. Course 1's side of the VM handoff, `handoff/publish.py` and `parity.py`, moved into course 1 as lnl/publish.py and lnl/parity.py on 2026-11-03 (course1-v1.2).
 - [x] **Move course 1's side of the VM handoff: done 2026-11-03** (`course1-v1.2`). `publish.py` and `parity.py` are course 1's `lnl/publish.py` and `lnl/parity.py`, importing nothing from course 2. Course 2 keeps `receive.py`, the contract and the lock; `receive where` tells course 1's publish step which folder to fill, and the lake's parity gate runs course 1's checks. The repo boundary now matches the course boundary: nothing of course 1 lives in course 2.
 - [x] **Automatic tagging goes right before `incident_report`**, as Priority 4b. Free text is where automatic PII detection matters most, and tags set at ingestion should exist before that text arrives.

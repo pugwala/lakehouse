@@ -24,25 +24,25 @@ Everything is reached through the VM's Tailscale name from any device on wrolfga
 | SSH to the VM | `ssh lakehouse` (Mac `~/.ssh/config`) | User `claude`, SSH key from the Mac |
 | VM addresses | Tailscale <tailnet-ip> (`<tailnet-host>`); LAN <vm-lan-ip> |  |
 | Proxmox | https://<proxmox-host-ip>:8006, VM 140 |  |
-| Code | GitHub `pugwala/lakehouse` (course 2, `main`; course 1 is the submodule `course1/` = `pugwala/homelake` at `course1-v1.0`). The live stack runs from it (since 2026-11-03); the frozen old branch is `pugwala/lunch-and-learn-data-cleansing`, branch `duckdb-lakehouse` | Pushes as `pugwala` |
+| Code | GitHub `pugwala/lakehouse` (course 2, `main`; course 1 is the submodule `course1/` = `pugwala/homelake` at `course1-v1.3`). The live stack runs from it (since 2026-11-03); the frozen old branch is `pugwala/lunch-and-learn-data-cleansing`, branch `duckdb-lakehouse` | Pushes as `pugwala` |
 | Status snapshot | [Home Lakehouse Handoff](https://claude.ai/artifact/2Ee11DTfMk8kLEoLtR7d3U) |  |
 
 **Read a secret, in your own SSH session (never in chat):**
 
 ```bash
-grep '^JUPYTER_TOKEN=' ~/lunch-and-learn-data-cleansing/lakehouse/.env | cut -d= -f2-
+grep '^JUPYTER_TOKEN=' ~/lakehouse/lakehouse/.env | cut -d= -f2-
 ```
 
 **Check everything, on the VM as `claude`.** It changes nothing and takes a few seconds:
 
 ```bash
-bash ~/lunch-and-learn-data-cleansing/lakehouse/scripts/bootstrap.sh --check
+bash ~/lakehouse/lakehouse/scripts/bootstrap.sh --check
 ```
 
 **After a `daily_lake` run:**
 
 ```bash
-cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core exec -T jupyter pytest -q lakehouse/acceptance
+cd ~/lakehouse/lakehouse && docker compose --profile core exec -T jupyter pytest -q lakehouse/acceptance
 ```
 
 ## Up next
@@ -110,7 +110,7 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 - [x] Priority 5: incident\_report table (free text): done 2026-11-03, 997268d, homelake de44bd6; it completes the approved model before the scale-up
 - [x] Priority 6: chunk 10, scale-up (L) and benchmarks, measuring the final pipeline: done 2026-11-03 in a separate scratch lake (/lake/scratch/L), a4f77fd, homelake cf985dc
 - [x] MCP tools data\_product\_info and data\_quality (6896c68; homelake 2ac8828)
-- [ ] Fix two stale live acceptance tests: test\_node\_metrics\_describe\_the\_vm expects under 34 GiB of RAM (the VM has 47), and test\_population\_headline\_matches\_cube hard-codes 81,409 (now 80,877)
+- [x] Fix two stale live acceptance tests: test\_node\_metrics\_describe\_the\_vm expects under 34 GiB of RAM (the VM has 47), and test\_population\_headline\_matches\_cube hard-codes 81,409 (now 80,877). Done 2026-11-04 in the housekeeping (5747f25): both now read the live figure
 - [x] Remove the leftover Fuseki scratch graph urn:test:8f395fd7-…
 - [x] Architecture drawing in the Lakehouse Plan: brought up to date 2026-11-04 (as built that day), also in the repo as docs/architecture.png
 - [ ] Student handout PDF on homelake
@@ -118,16 +118,40 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 - [x] dashboards.py --check: retry on Superset's 429 rate limit (it failed once right after an acceptance run, 2026-11-02)
 - [x] Docs snapshots in homelake/docs: committed and pushed 2026-11-03 as homelake 319a0b2 (wrolfgar's permission). From now on: re-export and re-scrub when a doc changes
 - [ ] Clear pre-scrub session records (show wrolfgar the list first)
-- [ ] Ontology guide: rerun recipes 1 to 8, 10, 11 and 13 to 16 against the expanded world (their answers predate it; recipes 9 and 12 were rerun 2026-11-02)
-- [x] Priority 7: chunk 11, course sessions (optional), on the settled boundary
+- [x] Ontology guide: rerun recipes 1 to 8, 10, 11 and 13 to 16 against the expanded world (their answers predate it; recipes 9 and 12 were rerun 2026-11-02). Done 2026-11-04: all 16 rerun, with the how-to document
+- [x] Priority 7: chunk 11, course sessions (optional), on the settled boundary. Done 2026-11-04 (cb39f10): four world sessions in lakehouse/sessions/
 - [x] Priority 8: course 2 in its own repo (wrolfgar's call; homelake could become it), depending on course 1 at a tagged version, so the how-to document's paths and links are final
 - [x] Switch the live stack to a clone of `pugwala/lakehouse` (bootstrap from `~/lakehouse`, every service and check); then retire the old repo's `duckdb-lakehouse` and homelake's
 - [x] Move the course 2 notebooks (enterprise 02 §5, 03, 04, 05, databricks.yml) out of course 1, trim 00, and move `handoff/publish.py` + `parity.py` to course 1's side; tag `course1-v1.1` and move the pin
 - [x] Move `handoff/publish.py` + `parity.py` (course 1's side of the VM handoff) into course 1, and point course 2's bootstrap, Dagster parity check, CI and tests at them; tag `course1-v1.2`
 - [ ] Run both enterprise tracks once on the agency workspace (nothing has run on Databricks yet)
-- [x] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Today the MCP tools are described only in lakehouse/README.md (MCP section) and the server's docstrings.
-- [ ] Five new MCP tools: describe\_table, lineage, pipeline\_status, platform\_health, search\_incident\_reports (done 2026-11-04; architecture v3.3)
+- [x] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Done 2026-11-04: How to Use the Home Lakehouse, with all twelve MCP tools and their real answers (snapshot docs/how-to.md).
+- [x] Five new MCP tools: describe\_table, lineage, pipeline\_status, platform\_health, search\_incident\_reports (done 2026-11-04; architecture v3.3)
 - [ ] AI operating system and Lakehouse operating system model (wrolfgar, 2026-11-04). Scope not defined yet: ask wrolfgar what each model should cover before starting.
+
+## 2026-11-04 · Every doc brought into step
+
+**Why.** wrolfgar: "make sure all docs are up to date and versioned in sync".
+
+**The version.** Architecture v3.3, as of 2026-11-04, matches everywhere: the drawing, the Plan's version table, `docs/architecture.png`, git tag `arch-v3.3`, both READMEs, the Handoff and the how-to doc. Chunk 11 and the how-to doc don't change it, because teaching material and documents aren't components.
+
+**What was out of step, now fixed.**
+
+- **The course README.**
+  - Tag counts: 54 / 26 / 86 → 57 CJIS tables, 29 with personal data, 89 personal columns; 49 tags in use, not 48.
+  - "Next: the how-to document" now points at `docs/how-to.md`.
+  - "Still open: where alerts go" is answered: ntfy, to the phone.
+- **The Boundary doc.** It said six couplings remain "today": all six were removed by 2026-11-03. It called tagging "all manual": it has been automatic since 2026-11-02. It said `publish.py` and `parity.py` "move next": they moved on 2026-11-03.
+- **The how-to doc.** The handoff path said `v1`; the pinned version is `v2`.
+- **The Handoff.** Its layout table gained `sessions/`.
+- **The Plan.** It now links the how-to doc, and Phase 8's "each chunk stops for your go-ahead" is in the past tense.
+- **This log.**
+  - Three finished items were ticked: the five MCP tools, the ontology recipes and the two stale tests.
+  - Priorities 7 and 9 now say when they were done.
+  - The Quick reference commands used the old `~/lunch-and-learn-data-cleansing` path; they now use `~/lakehouse/lakehouse`.
+  - The pin in the Quick reference said `course1-v1.0`; it now says `course1-v1.3`.
+
+**Snapshots.** All six docs were re-exported, scrubbed and committed to `docs/`.
 
 ## 2026-11-04 · The how-to document, and the ontology recipes rerun
 

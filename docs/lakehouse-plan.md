@@ -20,7 +20,7 @@ I confirmed the core path works before writing this. The generator builds 100,00
 
 ## Where it stands (November 4, 2026)
 
-Phases 0 to 6 are built and running, Phase 7 waits on DuckDB 2.0.1, and a Phase 8 the original plan didn't have, the expanded world, is complete: all twelve chunks, the last (four world sessions) on November 4. The approved model is built, and on November 3 the scale-up to L was benchmarked in a scratch lake of its own. On November 2 the course 1 / course 2 boundary was built: the lake now lands course 1's frozen, checked output instead of running course 1's code. The phase sections below are the plan as written; this table says what was actually built.
+Phases 0 to 6 are built and running, Phase 7 waits on DuckDB 2.0.1, and a Phase 8 the original plan didn't have, the expanded world, is complete: all twelve chunks, the last (four world sessions) on November 4. The approved model is built, and on November 3 the scale-up to L was benchmarked in a scratch lake of its own. On November 2 the course 1 / course 2 boundary was built: the lake now lands course 1's frozen, checked output instead of running course 1's code. How to use all of it is in [How to Use the Home Lakehouse](https://claude.ai/artifact/TzBHFecVGL9oyzYKAZP9Ar). The phase sections below are the plan as written; this table says what was actually built.
 
 | Phase | Status | As built, where it differs from the plan |
 | --- | --- | --- |
@@ -258,7 +258,7 @@ Steps:
 
 ## Phase 8: The expanded world (12 chunks, started October 28)
 
-The course's 100,000 records are one flat list. Phase 8 builds the world around them, lakehouse-only, with the course itself unchanged: about 16.7M rows at scale M covering people (today's 86,879 villains plus heroes, secondary heroes and civilians), powers, teams, places, fights with their participants, power uses and damages, charges and court outcomes linked back to today's offender records, missions, and free-text incident reports. Each chunk stops for your go-ahead.
+The course's 100,000 records are one flat list. Phase 8 builds the world around them, lakehouse-only, with the course itself unchanged: about 16.7M rows at scale M covering people (today's 86,879 villains plus heroes, secondary heroes and civilians), powers, teams, places, fights with their participants, power uses and damages, charges and court outcomes linked back to today's offender records, missions, and free-text incident reports. Each chunk waited for your go-ahead; all twelve were done by November 4.
 
 | Chunk | What | Status |
 | --- | --- | --- |

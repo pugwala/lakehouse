@@ -38,7 +38,7 @@ Never print the whole file, `printenv` in a container, or `docker compose config
 | Course 1, pinned | the submodule `~/lakehouse/course1` at tag `course1-v1.3` ([pugwala/homelake](https://github.com/pugwala/homelake)) |
 | The lake's files | `/lake/data` (Parquet), its catalog in Postgres (`catalog-pg`) |
 | The expanded world's build | `/lake/landing/universe/M`: clean Parquet, messy CSVs, answer keys, the mention key |
-| Course 1's handoff | `/lake/landing/handoff/course1/v1` |
+| Course 1's handoff | `/lake/landing/handoff/course1/v2` (the version `course1.lock.json` pins) |
 | Backups | `/lake/catalog-backups` (nightly dumps), the restic repository (local for now) |
 | Running anything by hand | `cd ~/lakehouse/lakehouse && docker compose --profile core exec -T jupyter <command>` |
 

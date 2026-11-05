@@ -308,14 +308,14 @@ An MCP server at `https://<LAKE_TS_HOST>/mcp` gives an agent twelve read-only to
   it to one (Cube's `world_exceptions`, which holds counts only: a flagged value can be a name, so none is ever
   returned). Both by default, with the data-quality alerts firing now.
 - `find_by_tags(tags=None, match="any", level="both")`: lake tables and columns by the tags OpenMetadata holds for
-  them, any of the 48 in use: the tagger's (`Governance.CJIS`, `PIIType.BirthDate`, `Source.WorldGenerator`,
+  them, any of the 49 in use (2026-11-04): the tagger's (`Governance.CJIS`, `PIIType.BirthDate`, `Source.WorldGenerator`,
   `Layer.Gold`, `Refresh.Monthly`, ...), the hand-set `Sensitivity.*`, OpenMetadata's `PII.Sensitive`, and the
   glossary terms (`Lakehouse.SID Number`). A tag is a full name, a bare name when one family has it (`CJIS`), or a
   whole family (`PIIType.*`); case, spaces and hyphens don't matter, and a wrong one names close matches.
   - one tag: `["Governance.CJIS"]` finds the 57 CJIS tables;
   - several: `["PIIType.BirthDate", "PIIType.FreeText"]` finds tables with either, each saying which it has;
   - all of them: `match="all"` keeps only tables with every tag, on the table or any column (CJIS with a birth date
-    and free text: the raw and cleansed course records). Every one of the 48 at once answers too (none).
+    and free text: the raw and cleansed course records). Every one of the 49 at once answers too (none).
   - `level`: `"table"` looks only at tags on tables; `"column"` only at columns, and with `match="all"` one column
     must carry every tag (a birth date that is also hand-tagged Personal).
   With no tags it lists every tag in use, what it means, and how many tables and columns carry it.
@@ -764,10 +764,10 @@ table Governance.PII. Each tag records how and why it was set, in `ops.table_tag
 anyone can query. `om_sync.py` publishes them to OpenMetadata as five classifications (Governance, PIIType, Source,
 Layer, Refresh), marked Automated so they're told apart from hand-set ones. Every PIIType column also gets
 OpenMetadata's own `PII.Sensitive` (OpenMetadata already has classifications called PII and PersonalData, hence
-PIIType). Search by tag works: filter tables on `Governance.CJIS` and OpenMetadata finds exactly the 54 the tagger
+PIIType). Search by tag works: filter tables on `Governance.CJIS` and OpenMetadata finds exactly the 57 the tagger
 marked.
 
-Today it tags 54 CJIS tables, 26 with personal data and 86 personal columns. It finds every one of the 42 columns
+Today (2026-11-04) it tags 57 CJIS tables, 29 with personal data and 89 personal columns. It finds every one of the 42 columns
 people tagged by hand, plus what they missed: the state ID and offender number, gender, the conduct notes as free
 text, and the exceptions table's `value_as_written`, which holds raw birth dates and race codes. The hand-set
 Sensitivity tags, and the Cube masks they drive, are unchanged. Registering a new source in `sources.yml` is all it
@@ -1135,7 +1135,7 @@ checks on a GitHub runner in about 2.5 minutes.
 | Custody mart (`mart_custody`, enforced contracts): 7 acceptance tests (`test_custody_marts.py`) and 3 dbt tests, each seen failing first; a deliberate type change was refused by dbt | On the VM |
 | Custody products on Cube (three views; the MCP server picks the view that has the dimension): 10 acceptance tests (`test_custody_cube.py`), each seen failing first | On the VM |
 | Product descriptors, OpenMetadata domain, data products and contracts, DCAT in Fuseki, product freshness and coverage alerts: 17 acceptance tests (`test_products.py`, one per product where a test checks each), each seen failing first; a made-up view in a descriptor failed its test, and a 30-hour-old refresh fired `DataProductStale` | On the VM |
-| Automatic tags (`tagging/`, the `governance/tags` step, `om_sync.py`'s five classifications): 33 tests in `test_tagging.py` and 5 acceptance tests in `test_tags.py`, seen failing first; 6 mutations caught. Live: 56 CJIS tables, 28 with personal data, 88 personal columns (since Priority 5's narratives), all 44 hand tags found, search by tag finds exactly the tagged tables, and `om_sync.py --check` is in step | On the VM |
+| Automatic tags (`tagging/`, the `governance/tags` step, `om_sync.py`'s five classifications): 33 tests in `test_tagging.py` and 5 acceptance tests in `test_tags.py`, seen failing first; 6 mutations caught. Live: 57 CJIS tables, 29 with personal data, 89 personal columns (since the redacted incident reports, 2026-11-04), all 44 hand tags found, search by tag finds exactly the tagged tables, and `om_sync.py --check` is in step | On the VM |
 | Course 1's add-on (`LAKEHOUSE_COURSE1`: dbt, Cube, Superset, Dagster, the notebook alert, bootstrap): 10 tests in `test_course1_addon.py` and 1 bats test, seen failing first; 8 mutations caught. `checks.sh` builds dbt and loads Dagster with it off, and asks Cube's image which files it loads both ways; the live lab (on) passed `daily_lake` and every acceptance test as before | On the VM |
 | Course 1's handoff (`handoff/`: publish, the 19 numbers on the files, the contract, adopt, the lock; `universe` and the daily load reading from it): 9 tests in `test_handoff.py`, 6 in `test_lake_load.py` and 4 in `test_universe.py`, seen failing first (the code scan named 14 places `universe` reached into course 1); 12 mutations all caught. The world built from the handoff is byte-identical to the lake-built one at S and M, and the lake landed from it matched every ref, bronze and silver table from before | On the VM |
 | The world's data products (three descriptors, two domains, two inputs, four Cube views, monthly contracts, the Fights, Damage and Courts dashboard, freshness from Dagster materializations): 19 acceptance tests (`test_world_products.py`), all seen failing first; 7 mutations all caught | On the VM |
@@ -1152,11 +1152,12 @@ checks on a GitHub runner in about 2.5 minutes.
 - All twelve chunks are done: the approved model, benchmarked at L (in a scratch lake, deleted 2026-11-04; the live
   lab stays at M), and since 2026-11-04 the four world sessions (chunk 11).
 - Course 2 has its own repo, `pugwala/lakehouse` (Priority 8), and the live lab runs from it since 2026-11-03.
-- Next: the lakehouse how-to document.
+- The how-to document is written: [`docs/how-to.md`](../docs/how-to.md), a snapshot of the live Claude Doc.
+- Next: run both enterprise tracks on the agency workspace.
 
 Phases 0 to 6 are done: OpenMetadata holds the glossary and the sensitivity tags, the tags drive Cube's masks,
 Fuseki serves the same meaning as SPARQL, and Prometheus, Grafana and Alertmanager watch the platform, the pipeline
-and the data, with a nightly catalog backup. Still open: where alerts go (PagerDuty, email or both). Phase 7, upgrades,
+and the data, with a nightly catalog backup. Alerts go to a self-hosted ntfy server on the tailnet, and from there to the phone. Phase 7, upgrades,
 has started: every image is pinned. DuckDB 2.0 and DuckLake 1.1 wait for DuckDB 2.0.1 to be out at least two weeks
 (2.0.0 shipped 2026-10-21), with a Proxmox snapshot first, since older DuckDB can't read 2.0 files. See the plan
 document for the order and the reasoning.
