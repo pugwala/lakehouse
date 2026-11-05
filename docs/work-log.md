@@ -128,7 +128,23 @@ cd ~/lakehouse/lakehouse && docker compose --profile core exec -T jupyter pytest
 - [x] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Done 2026-11-04: How to Use the Home Lakehouse, with all twelve MCP tools and their real answers (snapshot docs/how-to.md).
 - [x] Five new MCP tools: describe\_table, lineage, pipeline\_status, platform\_health, search\_incident\_reports (done 2026-11-04; architecture v3.3)
 - [ ] AI operating system and Lakehouse operating system model (wrolfgar, 2026-11-04). Scope not defined yet: ask wrolfgar what each model should cover before starting.
-- [ ] Python mini-course between course 1 and course 2 (wrolfgar, 2026-11-04): the Python behind course 1's cleaning, for students completely new to Python, value first and then the how. Parts 0 (Open the Box, c4a2150), 1 (Strings, a8917cc) and 2 (Lists, Dictionaries and Loops, 0d7a639) built 2026-11-04 in homelake; part 3 (pandas, write strip\_and\_null) waits on wrolfgar's go.
+- [ ] Python mini-course between course 1 and course 2 (wrolfgar, 2026-11-04): the Python behind course 1's cleaning, for students completely new to Python, value first and then the how. Parts 0 (Open the Box, c4a2150), 1 (Strings, a8917cc) and 2 (Lists, Dictionaries and Loops, 0d7a639) built 2026-11-04, part 3 (pandas, 53289d4) on 2026-11-05, in homelake; part 4 (patterns) waits on wrolfgar's go.
+
+## 2026-11-05 · Python mini-course, part 3: pandas
+
+**Result.** Part 3 is in homelake (`python/03_pandas.ipynb`, 53289d4). Students write course 1's `strip_and_null`, as part 0 promised, and answer the Trust Test's Q1 with it.
+
+**Why.** wrolfgar: "Do part 3" (sent while on overage usage).
+
+**What we found.** Q1's column hides its blanks. 1,536 custody levels are written as nothing, but 2,991 are empty once stripped. A hand-written strip\_and\_null (loop over every column, strip, mask) matches course 1's table on all 2,700,000 cells. pandas is only about twice as fast as part 2's loop on one column, so the notebook sells it as one line instead of a loop and a counter, not as speed.
+
+**What we did.**
+
+- The notebook: DataFrame and Series, a question of every value, `.sum()` counting `True`s, `.str`, `.loc` filtering, `.mask`, `.isna()`, then `my_strip_and_null` and Q1 from the student's own table. It ends by reading course 1's version: theirs, line for line, apart from `text_columns`.
+- `lnl/check.py`: `p3_ex1` to `p3_ex3` and `p3_payoff`. A wrong table names the column, the row, what was written and both results.
+- `python/README.md` part 3 section (date refreshed to 2026-11-05); README and Facilitator Guide lines.
+
+**What verified it.** 50 tests pass, red first. 8 deliberate breaks caught. Reading the executed notebook caught two things: a bare `.sum()` displayed as `np.int64(33004)`, and a value\_counts that gave away #2's answer before it was asked. Both fixed. Leak grep 0, tieback clean.
 
 ## 2026-11-04 · Python mini-course, part 2: Lists, Dictionaries and Loops
 
