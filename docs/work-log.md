@@ -128,7 +128,25 @@ cd ~/lakehouse/lakehouse && docker compose --profile core exec -T jupyter pytest
 - [x] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Done 2026-11-04: How to Use the Home Lakehouse, with all twelve MCP tools and their real answers (snapshot docs/how-to.md).
 - [x] Five new MCP tools: describe\_table, lineage, pipeline\_status, platform\_health, search\_incident\_reports (done 2026-11-04; architecture v3.3)
 - [ ] AI operating system and Lakehouse operating system model (wrolfgar, 2026-11-04). Scope not defined yet: ask wrolfgar what each model should cover before starting.
-- [ ] Python mini-course between course 1 and course 2 (wrolfgar, 2026-11-04): the Python behind course 1's cleaning, for students completely new to Python, value first and then the how. Parts 0 (Open the Box, c4a2150), 1 (Strings, a8917cc) and 2 (Lists, Dictionaries and Loops, 0d7a639) built 2026-11-04, parts 3 (pandas, 53289d4) and 4 (Patterns, 0ed3a48) on 2026-11-05, in homelake; part 5 (your own session 2) waits on wrolfgar's go.
+- [ ] Python mini-course between course 1 and course 2 (wrolfgar, 2026-11-04): the Python behind course 1's cleaning, for students completely new to Python, value first and then the how. Parts 0 (Open the Box, c4a2150), 1 (Strings, a8917cc) and 2 (Lists, Dictionaries and Loops, 0d7a639) built 2026-11-04, parts 3 (pandas, 53289d4), 4 (Patterns, 0ed3a48) and 5 (Your Own Session 2, 37c9e00) on 2026-11-05, in homelake. All six parts built; whether to tag course1-v1.4 and move course 2's pin is wrolfgar's call.
+
+## 2026-11-05 · Python mini-course, part 5: Your Own Session 2 (the course is complete)
+
+**Result.** Part 5 is in homelake (`python/05_your_own_session_2.ipynb`, 37c9e00), and with it all six parts of the mini-course. Students chain their own functions into a pipeline that gives course 1's answers, then read the same steps in course 2's SQL.
+
+**Why.** wrolfgar: "do part 5".
+
+**What we found.** Asked of the raw file, three questions come out wrong: 1,536 missing custody levels, 1,457 with no disciplinary points, 0 KENTs. Students' own `my_session2` (their `my_strip_and_null`, a new `null_codes` built on `clean_value`, and `match_key`) matches course 1 on all 2,700,000 cells and answers 2,991, 5,851 and 3. Course 2's text cleaning is one SQL line, the `w_text` macro: trim and nullif do strip\_and\_null's job, and CASE WHEN ... IN does clean\_value's. Its list of codes includes `NONE`, which course 1's file treats as a real answer, so lists of codes belong to a source, not to the language.
+
+**What we did.**
+
+- The notebook. The SQL is quoted as text and dated (`dbt/macros/world.sql`, as of 2026-11-05), so course 1 still runs nothing from course 2.
+- `lnl/check.py`: `p5_ex1` to `p5_ex3` and `p5_payoff`. Part 3's cell-by-cell table compare is now a shared helper, `_first_difference`.
+- `python/README.md` part 5 section; README and Facilitator Guide lines.
+
+**What verified it.** 73 tests pass, red first. 9 deliberate breaks caught. Three survivors were redundant code, not missing tests: two guards for the same missing column (one removed) and an answer comparison that could never fail (removed). Two of my test expectations named the wrong column. The check reports in table order (`intake_time`, `99:99`), so the tests were corrected. Leak grep 0, tieback clean.
+
+**Still open.** Course 2 is pinned at `course1-v1.3`, which doesn't include the mini-course. Tagging `course1-v1.4` and moving the pin is wrolfgar's call.
 
 ## 2026-11-05 · Python mini-course, part 4: Patterns
 
