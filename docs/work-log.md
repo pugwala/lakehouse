@@ -47,7 +47,7 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 
 ## Up next
 
-**Now:** Priorities 1 to 6, 4b and 8 are done: the course 1 / course 2 boundary, automatic tagging, the incident reports (so the approved data model is complete), chunk 10 (the scale-up to L, benchmarked in a scratch lake of its own) and course 2's own repo, `pugwala/lakehouse`, with course 1 as a pinned submodule. So is the find\_by\_tags MCP tool, along with phases 0 to 7, dataset-expansion chunks 0 to 10 and all seven MCP tools. The live stack runs from the new repo since 2026-11-03. The enterprise track is split too (course1-v1.1), and course 1's side of the VM handoff (publish.py, parity.py) lives in course 1 (course1-v1.2). Next: run both enterprise tracks once on the agency workspace (needs wrolfgar at the workspace), chunk 11 (7) and the how-to document (9). Each waits for wrolfgar's go-ahead. Housekeeping was done 2026-11-04 (5747f25); the scratch lakes were deleted at wrolfgar's OK; the architecture drawing was brought up to date the same day; what's left (TrueNAS) waits for wrolfgar.
+**Now:** Priorities 1 to 8 and 4b are done. The dataset expansion is complete: all twelve chunks, with the world sessions (chunk 11) done on 2026-11-04. The MCP server has twelve tools (architecture v3.3). Course 2 runs from its own repo, `pugwala/lakehouse`, with course 1 pinned as a submodule. The how-to document (9) is written: How to Use the Home Lakehouse. Next: the enterprise tracks run at the agency workspace (needs wrolfgar there). Waiting for wrolfgar: the AI and Lakehouse operating-system models, whose scope he hasn't defined yet. TrueNAS is on hold.
 
 - [x] Steps 1 to 5 of the recovery plan (see the entries below), the Handoff doc update, and the `core-plus-dagster` snapshot
 - [x] Passwordless sudo: kept permanently by wrolfgar's decision
@@ -119,15 +119,90 @@ cd ~/lunch-and-learn-data-cleansing/lakehouse && docker compose --profile core e
 - [x] Docs snapshots in homelake/docs: committed and pushed 2026-11-03 as homelake 319a0b2 (wrolfgar's permission). From now on: re-export and re-scrub when a doc changes
 - [ ] Clear pre-scrub session records (show wrolfgar the list first)
 - [ ] Ontology guide: rerun recipes 1 to 8, 10, 11 and 13 to 16 against the expanded world (their answers predate it; recipes 9 and 12 were rerun 2026-11-02)
-- [ ] Priority 7: chunk 11, course sessions (optional), on the settled boundary
+- [x] Priority 7: chunk 11, course sessions (optional), on the settled boundary
 - [x] Priority 8: course 2 in its own repo (wrolfgar's call; homelake could become it), depending on course 1 at a tagged version, so the how-to document's paths and links are final
 - [x] Switch the live stack to a clone of `pugwala/lakehouse` (bootstrap from `~/lakehouse`, every service and check); then retire the old repo's `duckdb-lakehouse` and homelake's
 - [x] Move the course 2 notebooks (enterprise 02 §5, 03, 04, 05, databricks.yml) out of course 1, trim 00, and move `handoff/publish.py` + `parity.py` to course 1's side; tag `course1-v1.1` and move the pin
 - [x] Move `handoff/publish.py` + `parity.py` (course 1's side of the VM handoff) into course 1, and point course 2's bootstrap, Dagster parity check, CI and tests at them; tag `course1-v1.2`
 - [ ] Run both enterprise tracks once on the agency workspace (nothing has run on Databricks yet)
-- [ ] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Today the MCP tools are described only in lakehouse/README.md (MCP section) and the server's docstrings.
+- [x] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Today the MCP tools are described only in lakehouse/README.md (MCP section) and the server's docstrings.
 - [ ] Five new MCP tools: describe\_table, lineage, pipeline\_status, platform\_health, search\_incident\_reports (done 2026-11-04; architecture v3.3)
 - [ ] AI operating system and Lakehouse operating system model (wrolfgar, 2026-11-04). Scope not defined yet: ask wrolfgar what each model should cover before starting.
+
+## 2026-11-04 · The how-to document, and the ontology recipes rerun
+
+**Result.** [How to Use the Home Lakehouse](https://claude.ai/artifact/TzBHFecVGL9oyzYKAZP9Ar) is written. Every recipe in the ontology guide now shows today's answer. Priority 9 is done.
+
+**Why.** wrolfgar said: "do course 11 and then the how-to doc". The plan was to write it last, once the world stopped changing, and to rerun the ontology guide's out-of-date recipes at the same time.
+
+**The how-to document.** It has eight sections:
+
+1. Start here: every site, its login, and where the secrets live.
+2. Querying: Jupyter, Cube and Superset, and what each one shows.
+3. The MCP agent: how to connect, and all twelve tools, each with an answer taken from the live server that day.
+4. What the data means: OpenMetadata and Fuseki.
+5. Data products and readiness.
+6. The expanded world and the world sessions.
+7. Running and watching it: the jobs, alerts and backups.
+8. Changing it safely: bootstrap, the tests, CI, the docs snapshots and the architecture versions.
+
+Every number was checked against the system as it was written. Two of my own slips were fixed before it went out: "4 domains" became 3, and "Gotham" became Gotham City.
+
+**The ontology guide.** All 16 recipes were rerun against the live graph:
+
+- Restricted columns: 23, now including the world's team `stg_group` in bronze, silver and gold.
+- Offender Number: 10 columns in 10 tables, because convictions link back to offender records.
+- `sid_number`: 9 columns, all deduced pseudonymous.
+- Columns about a person: 36 one step from Person, 92 by any chain (it was 57).
+- The sensitivity-by-layer table gains the world's three layers.
+- The glossary picture: 28 terms and 42 links.
+- Unchanged: recipes 1, 2, 7 and 8, and the masks still hold (recipe 16).
+
+**A date fix.** Some of today's work was first dated November 5, the UTC date. It's still November 4 in Central, so the Work Log, the Plan, the how-to doc, both READMEs and the memory notes were corrected.
+
+**Tests.** Acceptance passes 431 of 431, with the 13 world-session tests among them.
+
+## 2026-11-04 · Chunk 11: four world sessions
+
+**Result.** Course 2 has four cleaning sessions on the expanded world's messy files, in `lakehouse/sessions/`. Each teaches one skill a flat table can't, and every exercise is checked against the world's answer keys. Offline tests pass 235 of 235, and `checks.sh` 17 of 17. That completes the dataset expansion's twelve chunks.
+
+**Why.** wrolfgar said: "do course 11 and then the how-to doc". Chunk 11 was planned as "extra class notebooks that use the new world tables… each teaching one cleaning skill against the messy files and checking its answers against the answer keys."
+
+**The sessions.** All four follow course 1's layout: a setup cell, 🧪 blanks with a check under each, the answers at the bottom, and a wrap-up. Each ends by showing how silver does the same job.
+
+- **Who is who:** duplicate people. A SID finds only 1,760 of the 8,877, because only villains have one. Then a match key of cleaned name and birth date.
+- **Dates that lie:** every format, with a written two-digit-year rule, then the charges filed before their fight.
+- **Links that break:** anti-joins for orphan links, then re-pointing links that go to a duplicate.
+- **Finding the names:** SIDs, phones, birth dates and names in the 200,000 incident reports. Names have no fixed shape, so you find them by the words around them, then find their repeats.
+
+**Grading.** `sessions/check.py` is the only code that reads the keys. A number is checked exactly. A result is graded by precision and recall, each with a bar to clear. Results with the answers filled in:
+
+- duplicate people: 95.2% found, at 99.3% precision;
+- dates: all 891,025 readable dates read right;
+- out-of-order charges: 99.0% found;
+- duplicate links: 95.5% re-pointed, at 99.1% precision;
+- SIDs and phones: all found;
+- birth dates: 94.5% found;
+- names: 91.1% found, at 96.9% precision.
+
+**TDD.**
+
+- `tests/test_sessions_check.py`: 6 tests of the grading, run in CI.
+- `acceptance/test_world_sessions.py`: 13 tests. Each notebook runs in a real kernel twice. As delivered, every check asks for an answer; with the Answers filled in, every check passes.
+- All tests were seen failing first, and 9 mutations were caught.
+- The first filled run caught a real trap: DuckDB's `trim()` leaves tabs, so 136 last names that are a lone tab were missed. Session 1 now teaches it.
+
+**Not changed.** The architecture stays at v3.3, because teaching material isn't a component.
+
+**Next.** The how-to document.
+
+## 2026-11-04 · Decision: the redacted reports keep their PII tag
+
+**Why.** wrolfgar asked what personal data is in the redacted reports.
+
+**What we found.** None was found across all 200,000 reports: no phone numbers, SIDs, emails, birth dates, or names after "My name is". The dates in the text are incident dates. The tag comes from the tagger's `free_text` rule, which fires on the shape of the text, not on anything found in it. What's left is indirect: when, where, the powers used and the incident ID. Joined on the incident ID, those can point to a pseudonymous `person_key`.
+
+**Decision.** wrolfgar: "keep the tag, the mock data is simply that - mocked up and it doesn't matter". No `Redacted` tag is added, and nothing changed.
 
 ## 2026-11-04 · Five new MCP tools; architecture v3.3
 

@@ -2,11 +2,11 @@
 
 # How to Use the Lakehouse Ontology (Jena Fuseki)
 
-Updated Nov 3, 2026 · @wrolfgar
+Updated Nov 4, 2026 · @wrolfgar
 
 ## What it is
 
-The ontology is a knowledge graph in Apache Jena Fuseki: a few named graphs that say what every lake column means, how the business terms relate, which columns are sensitive, which business rules hold, and which business inputs each data product waits on. You ask it questions in SPARQL. It holds no records, only meaning: 28 glossary terms, 598 columns across 75 lake tables, 23 columns tagged Restricted, 23 tagged Personal and 17 deduced Pseudonymous, 5 data products, 12 business rules and 5 business inputs (as of 2026-11-03, with the expanded world's tables and products, its incident reports and the tagger's two ops tables in).
+The ontology is a knowledge graph in Apache Jena Fuseki: a few named graphs that say what every lake column means, how the business terms relate, which columns are sensitive, which business rules hold, and which business inputs each data product waits on. You ask it questions in SPARQL. It holds no records, only meaning: 28 glossary terms, 604 columns across 76 lake tables, 23 columns tagged Restricted, 23 tagged Personal and 17 deduced Pseudonymous, 5 data products, 12 business rules and 5 business inputs (as of 2026-11-04, with the expanded world, its incident reports and their redacted copy in).
 
 Nobody edits it directly. It is a published copy of what OpenMetadata knows:
 
@@ -27,8 +27,8 @@ It answers questions that cross meaning, relationships and sensitivity in one qu
 | Question | Without the ontology | With it |
 | --- | --- | --- |
 | Which restricted columns hold part of an offender record? | Read the glossary, then each term's tags in OpenMetadata, then match column names yourself | One query: `stg_group`, `stg_status` |
-| Where does sensitive data live, layer by layer? | Open every table in OpenMetadata and scan its tags | One query: bronze, silver, gold and ref, 20 Restricted columns |
-| If the meaning of Offender Number changes, what is affected? | Search the code and dbt for the column name | One query: 7 columns in 7 tables, raw to the custody mart |
+| Where does sensitive data live, layer by layer? | Open every table in OpenMetadata and scan its tags | One query: bronze, silver, gold and ref, and the world's teams: 23 Restricted columns |
+| If the meaning of Offender Number changes, what is affected? | Search the code and dbt for the column name | One query: 10 columns in 10 tables, raw to the custody mart and the world's court outcomes |
 | What does "PC" mean? | Know that it's a synonym, then search | One query matches synonyms too: Protective Custody, with its definition |
 | Where is our glossary thin? | No easy way | One query: 17 of the fact table's columns have no term, including all four race and religion columns, the most sensitive ones |
 
@@ -121,7 +121,7 @@ Every relation is stored in both directions (*part of* and *has part*, *broader*
 
 ## Recipes
 
-Each recipe was run against the live graph on 2026-10-26, and its answer is shown under it. Add the three `PREFIX` lines in the browser or curl; the notebook helper adds them for you. Recipes 9 and 12 were run again on 2026-11-02, after the expanded world gained its data products. The others still show their first answers, from before the world's tables and terms arrived, so today's counts are larger; the queries themselves are unchanged.
+Every recipe was run again against the live graph on 2026-11-04, with the expanded world in, and its answer is shown under it. Add the three `PREFIX` lines in the browser or curl; the notebook helper adds them for you. The queries are the same as when the guide was written on 2026-10-26; the world's tables and terms made several answers larger.
 
 ### 1. Look up a word, synonyms included
 
@@ -163,8 +163,11 @@ SELECT ?table (GROUP_CONCAT(?name; separator=", ") AS ?cols) WHERE {
 | gold.fct\_offender\_record | race\_code, race\_omb, religion\_family, religion\_group, stg\_group, stg\_status |
 | gold.dim\_stg\_group | stg\_group |
 | ref.stg\_groups | stg\_group |
+| world\_bronze.team | stg\_group |
+| world\_silver.team | stg\_group |
+| world\_gold.dim\_team | stg\_group |
 
-Swap `lh:Restricted` for `lh:Personal` for the personal-data inventory: names, aliases, birth dates and conduct notes, in bronze (5 columns) and silver (8), never in gold.
+The world's villain groups reuse the course's STG groups, so their teams carry the same Restricted tag. Swap `lh:Restricted` for `lh:Personal` for the personal-data inventory: names, aliases, birth dates and conduct notes in the course's bronze (5 columns) and silver (8); the world's people in bronze and silver (4 each); and the incident reports' narrative in bronze and silver (1 each). None is in gold.
 
 ### 4. Every place one concept lives
 
@@ -175,7 +178,7 @@ SELECT ?table ?name ?sensitivity WHERE {
 } ORDER BY ?table ?name
 ```
 
-Answer: 6 columns in 4 tables (ref, silver, two gold), every one Restricted.
+Answer: 9 columns in 7 tables, every one Restricted: ref, silver and two gold for the course, and the world's teams in bronze, silver and gold.
 
 ### 5. Walk the relations around a term
 
@@ -186,7 +189,7 @@ SELECT ?relation ?other WHERE {
 } ORDER BY ?relation
 ```
 
-Answer: Offense Code is `broader` → Offense-Against Category, `related` → Violence Code, `partOf` → Offender Record.
+Answer: Offense Code is `broader` → Offense-Against Category, `related` → Violence Code and Charge, `partOf` → Offender Record. Charge is the expanded world's: a charge is filed under an offense code.
 
 ### 6. What a change to a term would touch
 
@@ -196,7 +199,7 @@ SELECT ?table ?name WHERE {
 } ORDER BY ?table
 ```
 
-Answer: 7 columns in 7 tables (as of 2026-10-27), from `bronze.hero_offenders_raw` through gold to `mart_custody.custody_snapshot_monthly`, including both copies of the conduct-notes answer key.
+Answer: 10 columns in 10 tables, from `bronze.hero_offenders_raw` through gold to `mart_custody.custody_snapshot_monthly`, including both copies of the conduct-notes answer key, and the world's dispositions and `world_gold.fct_charge`: a conviction links back to its offender record.
 
 ### 7. Where the glossary is thin
 
@@ -236,7 +239,7 @@ SELECT ?product (GROUP_CONCAT(DISTINCT ?view; separator=", ") AS ?views) WHERE {
 
 Answer: **Custody Offenses** (views `custody_admissions, custody_offenses`) and **Custody Population** (`custody_population`). The expanded world's three products speak in Person Key, not Person, so they don't appear. Swap `term:person` for any term, or match `lh:usesTable` against a table, to see who a change would reach before you make it. A property path reaches products one link further: `lh:usesTerm/lh:isAbout? term:incident` (the term itself, or a term that is about it) finds **Court Outcomes**, **Field Incidents** and **Incident Damage**. Court Outcomes is there only through the path: it speaks in Charge, and a Charge is about an Incident.
 
-Recipes 10 to 16 go further: where a fact came from, chains of links, readiness, yes/no checks, taking the graph into Python, and using it with Cube. Each was run against the live graph on 2026-10-31.
+Recipes 10 to 16 go further: where a fact came from, chains of links, readiness, yes/no checks, taking the graph into Python, and using it with Cube.
 
 ### 10. Stated or deduced: where did a fact come from?
 
@@ -254,7 +257,7 @@ SELECT ?table ?sensitivity ?source WHERE {
 } ORDER BY ?table
 ```
 
-Answer: all 6 `sid_number` columns, from `bronze.hero_offenders_raw` to `mart_custody.custody_snapshot_monthly`, are Pseudonymous, and every one says `deduced: identifier-of-a-person-is-pseudonymous`. Nobody tagged them; the rule found them. Swap the first line for `?c a lh:Column ; lh:table ?table .` to see every column's sensitivity with its source.
+Answer: all 9 `sid_number` columns are Pseudonymous: 6 for the course, from `bronze.hero_offenders_raw` to `mart_custody.custody_snapshot_monthly`, and the world's people in bronze, silver and `world_gold.dim_person`. Every one says `deduced: identifier-of-a-person-is-pseudonymous`. Nobody tagged them; the rule found them, including the world's three as soon as they landed. Swap the first line for `?c a lh:Column ; lh:table ?table .` to see every column's sensitivity with its source.
 
 ### 11. Follow a chain of links
 
@@ -268,7 +271,7 @@ SELECT ?term (COUNT(DISTINCT ?c) AS ?columns) WHERE {
 } GROUP BY ?term ORDER BY DESC(?columns) ?term
 ```
 
-Answer: all 14 other terms do, from Unit (8 columns) to Conduct Note (0). Offense-Against Category takes three steps: it is broader than Offense Code, which is part of Offender Record, which is about Person. No one-step query would find it.
+Answer: 17 terms do, from Unit (11 columns) to Conduct Note (0); the world added Participant, Person Key and Person Role. Offense-Against Category takes three steps: it is broader than Offense Code, which is part of Offender Record, which is about Person. No one-step query would find it.
 
 The same idea counts the columns that say something about a person:
 
@@ -279,7 +282,7 @@ SELECT (COUNT(DISTINCT ?direct) AS ?one_step) (COUNT(DISTINCT ?any) AS ?any_numb
 }
 ```
 
-Answer: 13 columns one step from Person, 57 by any chain. That 57 is the real footprint of personal information by meaning, which is far wider than the 13 columns tagged Personal.
+Answer: 36 columns one step from Person, 92 by any chain (13 and 57 before the expanded world). That 92 is the real footprint of personal information by meaning, which is far wider than the 23 columns tagged Personal.
 
 ### 12. Readiness: who does each product wait on?
 
@@ -315,7 +318,7 @@ To ask the other way round, which products wait on one unit, a path does it in o
 ASK { ?c lh:sensitivity lh:Restricted . FILTER NOT EXISTS { ?c lh:means ?t } }
 ```
 
-Answer: true, the race and religion columns from recipe 7. And `ASK { ?c lh:sensitivity lh:Personal ; lh:table ?t . FILTER STRSTARTS(?t, "gold.") }` answers false: no personal data has reached gold.
+Answer: true: 14 Restricted columns have no term, the race and religion columns from recipe 7 among them, with their raw copies and `stg_affiliation` in bronze and silver. And `ASK { ?c lh:sensitivity lh:Personal ; lh:table ?t . FILTER STRSTARTS(?t, "gold.") }` answers false: no personal data has reached gold.
 
 `GROUP BY` with `SUM` or `COUNT` gives a summary in one table, here sensitivity by layer:
 
@@ -337,6 +340,9 @@ Answer:
 | mart\_custody | 0 | 0 | 1 |
 | ref | 1 | 0 | 0 |
 | silver | 9 | 8 | 2 |
+| world\_bronze | 1 | 5 | 1 |
+| world\_gold | 1 | 0 | 4 |
+| world\_silver | 1 | 5 | 6 |
 
 ### 14. Everything about one thing
 
@@ -346,7 +352,7 @@ Answer:
 DESCRIBE term:person
 ```
 
-Answer: Person's name, definition and scheme, its synonyms (person, offender, inmate, individual), `lh:identifiedBy term:sid-number` and `lh:subjectOf term:offender-record`. It's a quick way to learn a term's shape before writing a query about it.
+Answer: Person's name, definition and scheme, its synonyms (person, offender, inmate, individual), `lh:identifiedBy` Person Key and SID Number, `lh:subjectOf` Participant and Offender Record, `lh:hasPart` Person Role, and `skos:related` Incident Report. It's a quick way to learn a term's shape before writing a query about it.
 
 ### 15. Take the graph into Python
 
@@ -384,7 +390,7 @@ nx.draw_networkx_edge_labels(G, pos, edge_labels=nx.get_edge_attributes(G, "rel"
 plt.axis("off")
 ```
 
-Answer: 892 facts in the graph; the picture has 15 terms and 17 links, with Offender Record at the centre and its 11 parts around it. Once the graph is in `rdflib` you can query it offline with `g.query("SELECT ...")`, or hand it to `networkx` for things SPARQL can't do, such as shortest paths.
+Answer: 2,384 facts in the graph; the picture has all 28 terms and 42 links, with Offender Record at the centre (15 links) and Incident and Person next (7 each). Once the graph is in `rdflib` you can query it offline with `g.query("SELECT ...")`, or hand it to `networkx` for things SPARQL can't do, such as shortest paths.
 
 ### 16. The graph and the numbers together
 

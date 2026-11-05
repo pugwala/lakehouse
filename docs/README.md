@@ -15,6 +15,7 @@ Who's who in these docs:
 
 | File | What it is | Live doc |
 | --- | --- | --- |
+| [how-to.md](how-to.md) | How to use the lakehouse: every site and login, querying, the MCP agent's twelve tools with real answers, meaning, data products, the expanded world, running it, and changing it safely | [How to Use the Home Lakehouse](https://claude.ai/artifact/TzBHFecVGL9oyzYKAZP9Ar) |
 | [work-log.md](work-log.md) | Every step taken on the lab, newest first: what was found, what was done, how it was verified, and the "Up next" list | [Home Lakehouse Work Log](https://claude.ai/artifact/Pr3cjkiYEo6rnXKb95XuJd) |
 | [handoff.md](handoff.md) | The status snapshot: where things stand, the repo layout, decisions, gotchas and how to work on the lab | [Home Lakehouse Handoff](https://claude.ai/artifact/2Ee11DTfMk8kLEoLtR7d3U) |
 | [lakehouse-plan.md](lakehouse-plan.md) | The original phased plan (Phases 0 to 7), what was actually built, and Phase 8, the expanded world | [DuckDB Home Lakehouse Plan](https://claude.ai/artifact/Js8ovfd7HE7BJ5Sj6TS3Sj) |

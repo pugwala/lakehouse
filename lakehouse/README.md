@@ -40,8 +40,9 @@ cleansing the class uses, so every number matches the Facilitator Guide. dbt bui
 | `fuseki/` | Apache Jena Fuseki 6.2.0, built from Apache's verified release: `Dockerfile`, `config.ttl` (one dataset; writes need the writer user), `shiro.ini` (no users; admin only inside the container), `start.sh` |
 | `cube/sync_masks.py` | Makes Cube mask exactly the columns OpenMetadata tags `Sensitivity.Restricted` |
 | `glossary/glossary.yml` | The glossary: 27 terms (15 for the course's data, 12 for the expanded world) with definitions, synonyms, columns, metrics and typed relations, and the rulebook (12 rules); `om_sync.py` loads it into OpenMetadata |
-| `universe/` | The expanded world's generator (dataset expansion, in progress; people, places, fights, charges and missions, their mess with answer keys, and their lake layers in `dbt/models/world`, so far): one random stream per table chunk, Parquet chunks written in parallel, the S/M/L knob, a fingerprinted manifest, and the check that the course's 100,000 records never change. See [The expanded world](#the-expanded-world-in-progress) |
+| `universe/` | The expanded world's generator (dataset expansion, complete: people, places, fights, charges, missions and incident reports, their mess with answer keys, and their lake layers in `dbt/models/world`): one random stream per table chunk, Parquet chunks written in parallel, the S/M/L knob, a fingerprinted manifest, and the check that the course's 100,000 records never change. See [The expanded world](#the-expanded-world) |
 | `08_from_lake.ipynb` | Session 8 for the lakehouse: the Trust Test answered in SQL over silver, checked against `gold.trust_test` |
+| `sessions/` | Course 2's four world sessions (chunk 11): duplicate people, dates that lie, links that break, and finding the names in free text, on the world's messy files, every exercise checked against the answer keys by `sessions/check.py`. See [`sessions/README.md`](sessions/README.md) |
 
 ## Tables
 
@@ -778,7 +779,7 @@ what else) and `pytest lakehouse/acceptance/test_tags.py` (5: all 42 hand-tagged
 table's tags in OpenMetadata, lineage into gold, search by tag, the vocabulary), all seen failing first; 6 mutations
 caught.
 
-## The expanded world (in progress)
+## The expanded world
 
 The course's 100,000 records are a flat list. The expansion builds the world around them, lakehouse-only, about
 16.6M rows at scale M: people (today's 86,879 villains plus heroes, secondary heroes with weak, temporary or borrowed
@@ -1053,6 +1054,27 @@ scratch lakes were deleted on 2026-11-04 once these numbers were recorded; rerun
 (about 3 minutes for L). Tests: `pytest lakehouse/tests/test_universe_bench.py` (8, a whole
 run at S; 13 mutations all caught, the two that would point dbt at the live lake checked by a unit test, never run).
 
+**Chunk 11, the world sessions (2026-11-04).** Four course 2 notebooks in [`sessions/`](sessions/README.md), each
+teaching one skill a flat table can't:
+- who is who: duplicate people;
+- dates that lie: every format, then charges filed before their fight;
+- links that break: orphans, and links to duplicates;
+- finding the names: SIDs, phones, birth dates and names in the incident reports.
+
+They work on the messy files, as delivered, through DuckDB. They have course 1's shape: 🧪 blanks, a check under
+each, and answers at the bottom.
+
+A result is graded by precision and recall against the world's answer keys, never against a stored solution, and
+each session ends by showing how silver does the same job. With the answers filled in:
+- 95.2% of the duplicates are found at 99.3% precision;
+- every readable date is read as written;
+- 99.0% of the out-of-order charges are found;
+- 95.5% of the duplicate links are re-pointed;
+- every SID and phone is found;
+- 91.1% of the names are found at 96.9% precision.
+
+That completes the dataset expansion's twelve chunks.
+
 ## Test status
 
 **Before a push, or in CI:** `bash lakehouse/ci/checks.sh` runs every check that needs no secrets and no running stack,
@@ -1088,6 +1110,7 @@ checks on a GitHub runner in about 2.5 minutes.
 | MCP server (`list_metrics`, `query_metric` with filters and time ranges, `define_term`, `business_rules`): 28 acceptance tests (`pytest lakehouse/acceptance/test_mcp.py`) and 4 bats tests, each seen failing first; the token check and synonym matching were shown to fail on deliberate breaks, and 8 mutations of the filters, time ranges and rulebook were all caught; checked end to end through Caddy (total restitution 1,333,587,950.77) | On the VM |
 | MCP `find_by_tags` (one tag, any or all of many, on tables, columns or both, forgiving names, the tag list): 10 acceptance tests (`pytest lakehouse/acceptance/test_mcp_tags.py`), all seen failing first and checked against the lake's own tag tables; 6 mutations caught, paging among them | On the VM |
 | MCP `data_product_info` and `data_quality` (and Cube's counts-only `world_exceptions`): 14 acceptance tests (`pytest lakehouse/acceptance/test_mcp_products.py`), all seen failing first; 8 mutations caught. A ninth (matching a product by title) survived because every title is its name in words, so title matching was removed as untestable | On the VM |
+| World sessions (chunk 11): the grading in `tests/test_sessions_check.py` (6, no world needed) and `acceptance/test_world_sessions.py` (13: each of the four notebooks runs in a real kernel as delivered, every check asking for its answer, and with its Answers section filled in, every check passing against the answer keys; about 40 s). All seen failing first; 9 mutations caught. The first filled run caught a real trap: `trim()` leaves tabs, so 136 tab-only last names were missed, and the session now teaches it | On the VM |
 | MCP `describe_table`, `lineage`, `pipeline_status`, `platform_health` and `search_incident_reports` (2026-11-04), with what they stand on: OpenMetadata lineage from dbt (`om_sync.py`), every public Cube view's `meta.reads`, and `world_gold.incident_report_redacted` with Cube's `incident_reports` view. 53 acceptance tests (`test_mcp_catalog.py` 19, `test_mcp_ops.py` 11, `test_mcp_reports.py` 9, `test_om_lineage.py` 7, `test_report_redaction.py` 7) and 18 offline (`tests/test_cube_reads.py` 17, one more in `test_world_lake.py`), all seen failing first and checked against the lake, dbt's manifest, the model files, Dagster and Prometheus asked directly; 38 mutations caught after one gap each in the city filter and the character-exact redaction check was closed. One test fails `monitoring_selftest` on purpose (its alert goes to the selftest topic) | On the VM |
 | OpenMetadata 2.0.5 with OpenSearch 2.19.6 under `/openmetadata`, no default credentials left: 8 acceptance tests (`pytest lakehouse/acceptance/test_openmetadata.py`) and 5 bats tests, each seen failing first; restarting with `--check` kept the same signing keys | On the VM |
 | `om_sync.py` (glossary with typed relations, Sensitivity tags, every lake table) and `define_term` reading OpenMetadata: 9 acceptance tests (`pytest lakehouse/acceptance/test_om_sync.py`); an edit in OpenMetadata reached `define_term`, and `om_sync.py` put it back with the relations intact | On the VM |
@@ -1125,9 +1148,11 @@ checks on a GitHub runner in about 2.5 minutes.
 
 ## Next phases
 
-**Dataset expansion:** chunks 0 to 10 and Priority 5 (incident reports) are done: the approved model is complete and benchmarked at L (in a scratch lake, deleted 2026-11-04; the live lab stays at M). Course 2 has its own repo, `pugwala/lakehouse`
-(Priority 8), and the live lab runs from it since 2026-11-03. Next: the course 2 notebooks out of course 1, and
-chunk 11, the optional course sessions.
+**Dataset expansion: complete.**
+- All twelve chunks are done: the approved model, benchmarked at L (in a scratch lake, deleted 2026-11-04; the live
+  lab stays at M), and since 2026-11-04 the four world sessions (chunk 11).
+- Course 2 has its own repo, `pugwala/lakehouse` (Priority 8), and the live lab runs from it since 2026-11-03.
+- Next: the lakehouse how-to document.
 
 Phases 0 to 6 are done: OpenMetadata holds the glossary and the sensitivity tags, the tags drive Cube's masks,
 Fuseki serves the same meaning as SPARQL, and Prometheus, Grafana and Alertmanager watch the platform, the pipeline

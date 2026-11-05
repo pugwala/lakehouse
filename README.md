@@ -29,9 +29,13 @@ like course 1's tags; [the Plan](docs/lakehouse-plan.md#architecture-versions) l
 ## Where to start
 
 - [`lakehouse/README.md`](lakehouse/README.md): what's here, setup, the daily run, every tool, and the test status.
+- [`lakehouse/sessions/`](lakehouse/sessions/README.md): course 2's four world sessions, cleaning skills on the
+  expanded world's messy files (duplicate people, dates, broken links, names in free text), checked against its
+  answer keys.
 - [`enterprise/`](enterprise/README.md): the same ideas on an enterprise Databricks workspace. Course 1's track ends with a pipeline and two handed-over deliveries; this one takes it on: the next delivery, governance, a scheduled job that alerts, and monitoring, with its own helpers.
-- [`docs/`](docs/README.md): snapshots of the lab's working documents (the plan, the handoff, the work log, the
-  ontology guide and the course boundary).
+- [`docs/how-to.md`](docs/how-to.md): how to use the whole lakehouse, start here.
+- [`docs/`](docs/README.md): snapshots of the lab's working documents (the how-to, the plan, the handoff, the work log,
+  the ontology guide and the course boundary).
 - `lakehouse/ci/checks.sh`: every check that needs no secrets and no running stack; GitHub runs it on every push.
 
 ## Rules this repo keeps

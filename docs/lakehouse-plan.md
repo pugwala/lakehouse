@@ -20,7 +20,7 @@ I confirmed the core path works before writing this. The generator builds 100,00
 
 ## Where it stands (November 4, 2026)
 
-Phases 0 to 6 are built and running, Phase 7 waits on DuckDB 2.0.1, and a Phase 8 the original plan didn't have, the expanded world, is ten chunks in: the approved model is complete, and on November 3 the scale-up to L was benchmarked in a scratch lake of its own. On November 2 the course 1 / course 2 boundary was built: the lake now lands course 1's frozen, checked output instead of running course 1's code. The phase sections below are the plan as written; this table says what was actually built.
+Phases 0 to 6 are built and running, Phase 7 waits on DuckDB 2.0.1, and a Phase 8 the original plan didn't have, the expanded world, is complete: all twelve chunks, the last (four world sessions) on November 4. The approved model is built, and on November 3 the scale-up to L was benchmarked in a scratch lake of its own. On November 2 the course 1 / course 2 boundary was built: the lake now lands course 1's frozen, checked output instead of running course 1's code. The phase sections below are the plan as written; this table says what was actually built.
 
 | Phase | Status | As built, where it differs from the plan |
 | --- | --- | --- |
@@ -32,7 +32,7 @@ Phases 0 to 6 are built and running, Phase 7 waits on DuckDB 2.0.1, and a Phase 
 | 5. Semantic and ontology stack | Done | Masks in Cube come from OpenMetadata's Restricted tags (`sync_masks.py`). The glossary and column tags go to Fuseki as RDF, with SPARQL deduction rules and SHACL shapes for the business rules. Since November 2 every table and column is also tagged automatically as data lands (Governance such as CJIS and PII, PIIType, Source, Layer, Refresh) |
 | 6. Monitoring and alerting | Done | Prometheus, Grafana and Alertmanager in the VM's own monitoring profile. Alerts go to a self-hosted ntfy server on the phone, not PagerDuty |
 | 7. Upgrades | Waiting | DuckDB 2.0 waits for 2.0.1; k3s not started |
-| 8. The expanded world | Chunks 0 to 10 and the incident reports done; L benchmarked in a scratch lake | See Phase 8 below |
+| 8. The expanded world | Complete: chunks 0 to 11 and the incident reports; L benchmarked in a scratch lake | See Phase 8 below |
 
 Built beyond the plan:
 
@@ -273,7 +273,7 @@ The course's 100,000 records are one flat list. Phase 8 builds the world around 
 | 8 | Glossary, ontology, rules for the new entities | Done November 2: 12 glossary terms with typed relations (a new `occursAt`: Incident occurs at Location), the world's schemas in OpenMetadata with personal and restricted tags, and six new rules (five dbt tests, one SHACL shape) |
 | 9 | Data products, Cube, dashboards, readiness inputs (Field Ops, Insurance, Courts) | Done November 2: Field Incidents and Incident Damage (Field Operations) and Court Outcomes (Justice), served by four Cube views and a Fights, Damage and Courts dashboard, waiting on Field Operations', Insurance's and the Courts liaison's monthly closes, with monthly contracts and honest freshness |
 | 10 | Scale-up (L) and benchmarks | Done November 3, in a scratch lake of its own (`/lake/scratch/L`, deleted November 4 once the numbers were recorded; the live lab stays at M). L, 65.6M rows, builds in 164 s at a 27.6 GB peak; dbt takes 44 s with every answer-key and rule test passing; the dashboards' queries stay under 0.3 s. The build's memory is the limit, not the lake |
-| 11 | Course sessions (optional) |  |
+| 11 | Course sessions (optional). Done November 4: four world sessions in lakehouse/sessions/ (who is who, dates that lie, links that break, finding the names), on the messy files, every exercise checked against the answer keys |  |
 
 Done November 3, before chunk 10: `incident_report`, 200,000 free-text fight write-ups at M for the text-analysis sessions (a hero's field report, a civilian's witness statement or the desk's note of the call). They name people on purpose, and a mention key (`mention_key/incident_report`, 1.9M rows) says where every name, alias, SID, birth date and phone sits in the text, so redaction can be graded on the lake. The tagger tagged the narrative PIIType.FreeText as it landed, with no rule change. That completes the approved model.
 
