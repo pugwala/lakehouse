@@ -128,7 +128,23 @@ cd ~/lakehouse/lakehouse && docker compose --profile core exec -T jupyter pytest
 - [x] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Done 2026-11-04: How to Use the Home Lakehouse, with all twelve MCP tools and their real answers (snapshot docs/how-to.md).
 - [x] Five new MCP tools: describe\_table, lineage, pipeline\_status, platform\_health, search\_incident\_reports (done 2026-11-04; architecture v3.3)
 - [ ] AI operating system and Lakehouse operating system model (wrolfgar, 2026-11-04). Scope not defined yet: ask wrolfgar what each model should cover before starting.
-- [ ] Python mini-course between course 1 and course 2 (wrolfgar, 2026-11-04): the Python behind course 1's cleaning, for students completely new to Python, value first and then the how. Parts 0 (Open the Box, c4a2150), 1 (Strings, a8917cc) and 2 (Lists, Dictionaries and Loops, 0d7a639) built 2026-11-04, part 3 (pandas, 53289d4) on 2026-11-05, in homelake; part 4 (patterns) waits on wrolfgar's go.
+- [ ] Python mini-course between course 1 and course 2 (wrolfgar, 2026-11-04): the Python behind course 1's cleaning, for students completely new to Python, value first and then the how. Parts 0 (Open the Box, c4a2150), 1 (Strings, a8917cc) and 2 (Lists, Dictionaries and Loops, 0d7a639) built 2026-11-04, parts 3 (pandas, 53289d4) and 4 (Patterns, 0ed3a48) on 2026-11-05, in homelake; part 5 (your own session 2) waits on wrolfgar's go.
+
+## 2026-11-05 · Python mini-course, part 4: Patterns
+
+**Result.** Part 4 is in homelake (`python/04_patterns.ipynb`, 0ed3a48). Students read and write the patterns behind course 1's ID proof and its date formats.
+
+**Why.** wrolfgar: "do part 4".
+
+**What we found.** Q4 makes the hook. As text, the earliest projected release date is `01-01-2018`, because text sorts by its first character; session 3 finds `1999-11-02`. The column holds 45,025 different dates in 26 shapes, and course 1's nine patterns recognize every one of the 97,008 that aren't empty (checked). Every offender number and SID is 8 digits, so the pattern is a proof, not a finding.
+
+**What we did.**
+
+- The notebook: the pattern pieces course 1 uses (`\d`, `{8}`, `{1,2}`, `[A-Za-z]`, `+`), `re.fullmatch`, Q5's lost zero in the naive load, the ID pattern, `set_record_id` read, `re.sub` and the shape trick, `DATE_FORMATS` read, the `YYYY-MM-DD` pattern (which must not match a date with a time), `classify_formats` read.
+- `lnl/check.py`: `p4_ex1` to `p4_ex3` and `p4_payoff`. Patterns are graded by what they match, against `ID_PATTERN` (186,885 IDs and near-misses) and `DATE_FORMATS`; `shape` against `dates.profile_shapes`.
+- `python/README.md` part 4 section; README and Facilitator Guide lines.
+
+**What verified it.** 61 tests pass, red first. 9 deliberate breaks caught, after two tests were added for gaps the survivors showed: a pattern that is too strict, and a shape function that always gives a real but wrong shape. Two bugs of mine failed the notebook tests before anything shipped: `.min()` on a text column with empty values, and a raw-string build cell that wrote `\"\"\"` instead of a docstring. Reading the run notebook caught wrong line numbers (10 and 15, not 9 and 13) and "a few dozen shapes" (26). Leak grep 0, tieback clean.
 
 ## 2026-11-05 · Python mini-course, part 3: pandas
 
