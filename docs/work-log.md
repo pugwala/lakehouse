@@ -128,7 +128,24 @@ cd ~/lakehouse/lakehouse && docker compose --profile core exec -T jupyter pytest
 - [x] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Done 2026-11-04: How to Use the Home Lakehouse, with all twelve MCP tools and their real answers (snapshot docs/how-to.md).
 - [x] Five new MCP tools: describe\_table, lineage, pipeline\_status, platform\_health, search\_incident\_reports (done 2026-11-04; architecture v3.3)
 - [ ] AI operating system and Lakehouse operating system model (wrolfgar, 2026-11-04). Scope not defined yet: ask wrolfgar what each model should cover before starting.
-- [ ] Python mini-course between course 1 and course 2 (wrolfgar, 2026-11-04): the Python behind course 1's cleaning, for students completely new to Python, value first and then the how. Part 0 (Open the Box) built 2026-11-04, homelake c4a2150; part 1 (strings) waits on wrolfgar's go.
+- [ ] Python mini-course between course 1 and course 2 (wrolfgar, 2026-11-04): the Python behind course 1's cleaning, for students completely new to Python, value first and then the how. Parts 0 (Open the Box, c4a2150) and 1 (Strings, a8917cc) built 2026-11-04 in homelake; part 2 (lists, dictionaries, loops, if) waits on wrolfgar's go.
+
+## 2026-11-04 · Python mini-course, part 1: Strings
+
+**Result.** Part 1 is in homelake (`python/01_strings.ipynb`, a8917cc). Students write their first function, `match_key`, and it answers the Trust Test's Q3 the way session 2 does.
+
+**Why.** wrolfgar: "do part 1".
+
+**What we found.** The value hook is in the data. An exact match on `KENT` finds 0 records as written; session 2 finds 3 (`Kent`, `kent`, `kEnT`). GARCIA is typed 31 ways. `last_name` holds 9,619 spellings but only 379 names once trimmed and capitalized (one of them the empty name). A plain `name.strip().upper()` agrees with course 1's `last_name_std` on all 9,125 different last names without accents; accents are what `fold_accents` adds. No last name has runs of spaces inside, so `split`/`join` isn't taught as a need.
+
+**What we did.**
+
+- The notebook: strings and variables, methods (which never change the string), `==` versus `=`, f-strings, where `.title()` goes wrong (`Mcdonald`, `Worthington Iii`), `def`/`return`, `.map`, then `standardize_names` read line by line.
+- `lnl/check.py`: `p1_ex1` to `p1_ex3` and `p1_payoff`. A blank, a missing `return` and an error each get their own message.
+- The notebook tests now cover every part in `python/`, and a notebook added there without a test fails them.
+- `python/README.md` part 1 section with what the room should see; README and Facilitator Guide lines.
+
+**What verified it.** 32 tests pass, run in the course's Jupyter image. Red first. 10 deliberate breaks caught, after two test fixes: the payoff check must say nothing more after asking for an answer, and a function that finds the KENTs but gets other names wrong must fail. Reading the executed notebook caught three text errors before commit: "about 94,000" names (it's 9,125 different ones), `O'CONNOR` as a `.title()` failure (it isn't one), and "dozens" for GARCIA's 31. Leak grep 0, tieback clean.
 
 ## 2026-11-04 · Python mini-course, part 0: Open the Box
 
