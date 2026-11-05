@@ -2,7 +2,7 @@
 
 # How to Use the Home Lakehouse
 
-Updated Nov 4, 2026 · @wrolfgar
+Updated Nov 5, 2026 · @wrolfgar
 
 ## Start here
 
@@ -35,7 +35,7 @@ Never print the whole file, `printenv` in a container, or `docker compose config
 | Thing | Where |
 | --- | --- |
 | Course 2's repo (the live stack runs from it) | `~/lakehouse` on the VM; [pugwala/lakehouse](https://github.com/pugwala/lakehouse) |
-| Course 1, pinned | the submodule `~/lakehouse/course1` at tag `course1-v1.3` ([pugwala/homelake](https://github.com/pugwala/homelake)) |
+| Course 1, pinned | the submodule `~/lakehouse/course1` at tag `course1-v1.4` ([pugwala/homelake](https://github.com/pugwala/homelake)) |
 | The lake's files | `/lake/data` (Parquet), its catalog in Postgres (`catalog-pg`) |
 | The expanded world's build | `/lake/landing/universe/M`: clean Parquet, messy CSVs, answer keys, the mention key |
 | Course 1's handoff | `/lake/landing/handoff/course1/v2` (the version `course1.lock.json` pins) |

@@ -128,7 +128,23 @@ cd ~/lakehouse/lakehouse && docker compose --profile core exec -T jupyter pytest
 - [x] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Done 2026-11-04: How to Use the Home Lakehouse, with all twelve MCP tools and their real answers (snapshot docs/how-to.md).
 - [x] Five new MCP tools: describe\_table, lineage, pipeline\_status, platform\_health, search\_incident\_reports (done 2026-11-04; architecture v3.3)
 - [ ] AI operating system and Lakehouse operating system model (wrolfgar, 2026-11-04). Scope not defined yet: ask wrolfgar what each model should cover before starting.
-- [ ] Python mini-course between course 1 and course 2 (wrolfgar, 2026-11-04): the Python behind course 1's cleaning, for students completely new to Python, value first and then the how. Parts 0 (Open the Box, c4a2150), 1 (Strings, a8917cc) and 2 (Lists, Dictionaries and Loops, 0d7a639) built 2026-11-04, parts 3 (pandas, 53289d4), 4 (Patterns, 0ed3a48) and 5 (Your Own Session 2, 37c9e00) on 2026-11-05, in homelake. All six parts built; whether to tag course1-v1.4 and move course 2's pin is wrolfgar's call.
+- [ ] Python mini-course between course 1 and course 2 (wrolfgar, 2026-11-04): the Python behind course 1's cleaning, for students completely new to Python, value first and then the how. Parts 0 (Open the Box, c4a2150), 1 (Strings, a8917cc) and 2 (Lists, Dictionaries and Loops, 0d7a639) built 2026-11-04, parts 3 (pandas, 53289d4), 4 (Patterns, 0ed3a48) and 5 (Your Own Session 2, 37c9e00) on 2026-11-05, in homelake. All six parts built; tagged course1-v1.4 and course 2's pin moved there on 2026-11-05 (lakehouse 0c4b75d).
+
+## 2026-11-05 · Course 1 tagged course1-v1.4, and course 2's pin moved there
+
+**Result.** homelake's tag `course1-v1.4` (annotated, on 37c9e00) holds the Python mini-course, and course 2's submodule `course1/` is pinned at it (lakehouse 0c4b75d).
+
+**Why.** wrolfgar: "yes", to tagging `course1-v1.4` and moving course 2's pin.
+
+**What we found.** Nothing course 2 runs changed between `course1-v1.3` and `course1-v1.4`: no change to `lnl`'s cleaning modules, `publish`, `parity`, `pipeline` or the generator. So the handoff and the daily load are untouched, and course 2's handoff records no course 1 version. The mini-course sits in `python/`, outside the weekly notebook run's `notebooks/0*.ipynb`.
+
+**What we did.**
+
+- Tagged homelake `course1-v1.4` as pugwala and pushed the tag.
+- In lakehouse: the pin test first (`test_course1_pin.py` expects v1.4, seen failing), then `COURSE1_TAG`. `test_course1_tag.py` failed until the submodule was checked out at the tag. Both READMEs now name v1.4, and the test table has a row for it.
+- The Handoff ("As of" now 2026-11-05, 05:02 CST), How-to, Plan and Boundary doc name v1.4, with their Updated dates refreshed.
+
+**What verified it.** `lakehouse/tests` 235 passed, `ci/checks.sh` all passed, the pin and tag tests 5 of 5. Leak grep 0, tieback clean.
 
 ## 2026-11-05 · Python mini-course, part 5: Your Own Session 2 (the course is complete)
 

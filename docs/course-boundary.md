@@ -2,7 +2,7 @@
 
 # Course 1 / Course 2 Boundary
 
-Updated Nov 4, 2026 · @wrolfgar
+Updated Nov 5, 2026 · @wrolfgar
 
 ## The decision
 
@@ -78,7 +78,7 @@ On 2026-11-02 six ties connected course 2 to course 1. Priorities 2, 3, 4 and 8 
 | The course's mess kinds are copied by hand | `universe/mess.py` | Priority 2: becomes course 2's own documented spec |
 | The core is cleansed by course 1's pandas pipeline in course 2's daily run | `lake.py` | Priority 3: the handoff contract |
 | Course 1's material runs in course 2's platform: Trust Test, the 19-number parity gate, `notebook_smoke` | Dagster, Cube, Superset | Priority 4: an optional add-on |
-| Course 2 lives on a branch of the course repo (`duckdb-lakehouse`) | the repo | Priority 8: **done 2026-11-03.** Course 2 is [pugwala/lakehouse](https://github.com/pugwala/lakehouse); course 1 is its submodule `course1/`, homelake at the tag `course1-v1.0` at first; now course1-v1.3 (the enterprise notebooks say how to run them when opened outside Databricks) |
+| Course 2 lives on a branch of the course repo (`duckdb-lakehouse`) | the repo | Priority 8: **done 2026-11-03.** Course 2 is [pugwala/lakehouse](https://github.com/pugwala/lakehouse); course 1 is its submodule `course1/`, homelake at the tag `course1-v1.0` at first; now course1-v1.4 (v1.3: the enterprise notebooks say how to run them when opened outside Databricks; v1.4: the Python mini-course, taken between the two courses) |
 
 ## Course 2 topics noted
 
