@@ -128,7 +128,23 @@ cd ~/lakehouse/lakehouse && docker compose --profile core exec -T jupyter pytest
 - [x] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Done 2026-11-04: How to Use the Home Lakehouse, with all twelve MCP tools and their real answers (snapshot docs/how-to.md).
 - [x] Five new MCP tools: describe\_table, lineage, pipeline\_status, platform\_health, search\_incident\_reports (done 2026-11-04; architecture v3.3)
 - [ ] AI operating system and Lakehouse operating system model (wrolfgar, 2026-11-04). Scope not defined yet: ask wrolfgar what each model should cover before starting.
-- [ ] Python mini-course between course 1 and course 2 (wrolfgar, 2026-11-04): the Python behind course 1's cleaning, for students completely new to Python, value first and then the how. Parts 0 (Open the Box, c4a2150) and 1 (Strings, a8917cc) built 2026-11-04 in homelake; part 2 (lists, dictionaries, loops, if) waits on wrolfgar's go.
+- [ ] Python mini-course between course 1 and course 2 (wrolfgar, 2026-11-04): the Python behind course 1's cleaning, for students completely new to Python, value first and then the how. Parts 0 (Open the Box, c4a2150), 1 (Strings, a8917cc) and 2 (Lists, Dictionaries and Loops, 0d7a639) built 2026-11-04 in homelake; part 3 (pandas, write strip\_and\_null) waits on wrolfgar's go.
+
+## 2026-11-04 · Python mini-course, part 2: Lists, Dictionaries and Loops
+
+**Result.** Part 2 is in homelake (`python/02_lists_and_loops.ipynb`, 0d7a639). Students write the job of course 1's `apply_null_tokens` and read `display_name`'s rules.
+
+**Why.** wrolfgar: "do part 2".
+
+**What we found.** The hook is a question with a wrong easy answer. Counting empty values says 3,005 records have no disciplinary points recorded, but 2,846 more say `N/A`: the real answer is 5,851. The codes in the file are exactly `N/A`, `U`, `UNK` and `99:99`, never in lowercase, so `value in codes` is enough. The notebook mentions course 1's capitalize-first habit, and the check accepts both.
+
+**What we did.**
+
+- The notebook: lists (`codes[0]`, `in`, `len`, `.append`, `" ".join`), the data dictionary as a dictionary of lists (and why `housing_restriction`'s `NONE` isn't in it), `for` over `.items()`, `if`/`else`, `None`, `clean_value`, then a loop inside a loop with a counter over the whole file. It ends by reading `apply_null_tokens` and `display_name` line by line.
+- `lnl/check.py`: `p2_ex1` to `p2_ex3` and `p2_payoff`. A function whose blank is unfilled is spotted by the name `___` in its compiled code, so it is asked for rather than marked wrong.
+- `python/README.md` part 2 section; README and Facilitator Guide lines.
+
+**What verified it.** 42 tests pass, red first. 9 deliberate breaks caught. One survivor showed a real gap: nothing proved the grader tries values that appear only once, so a test now uses a function wrong on one rare value. Another survivor was a comparison that could never fail (agreeing on every value means the counts match), so it was removed. Reading the executed notebook caught one wrong note: `display_name` hands back anything that isn't a string, not just empty values. Leak grep 0, tieback clean.
 
 ## 2026-11-04 · Python mini-course, part 1: Strings
 
