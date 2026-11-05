@@ -3,7 +3,7 @@
     pytest lakehouse/tests/test_course1_pin.py     # inside the jupyter container (or the CI sandbox)
 
 Course 2 is this repo (pugwala/lakehouse). Course 1, sessions 1-7 with lnl, the generator, the notebooks and the
-Facilitator Guide, is the git submodule course1/, pinned at homelake's tag course1-v1.3. The tests check that:
+Facilitator Guide, is the git submodule course1/, pinned at homelake's tag course1-v1.4. The tests check that:
   - nothing of course 1 sits beside lakehouse/: it lives only in course1/, which .gitmodules takes from homelake;
   - everything that runs course 1's code finds it in course1/: the handoff's generator, notebook_smoke's notebooks,
     the Jupyter image's requirements and wheels, and the Python path Compose and CI set;
@@ -42,7 +42,7 @@ def test_gitmodules_takes_course_1_from_homelake_at_its_tag():
     modules.read(REPO / ".gitmodules")
     assert modules['submodule "course1"']["path"] == "course1"
     assert modules['submodule "course1"']["url"] == "https://github.com/pugwala/homelake.git"
-    assert addon.COURSE1_TAG == "course1-v1.3"
+    assert addon.COURSE1_TAG == "course1-v1.4"
 
 
 def test_everything_that_runs_course_1_finds_it_in_course1():
