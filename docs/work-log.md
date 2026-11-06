@@ -127,8 +127,28 @@ cd ~/lakehouse/lakehouse && docker compose --profile core exec -T jupyter pytest
 - [ ] Run both enterprise tracks once on the agency workspace (nothing has run on Databricks yet)
 - [x] Priority 9: Lakehouse how-to document (a Claude Doc, wrolfgar, 2026-11-02): how to use every part, including all seven MCP tools with worked examples. Best after chunks 10 and 11 and incident\_report, once the world stops changing. Done 2026-11-04: How to Use the Home Lakehouse, with all twelve MCP tools and their real answers (snapshot docs/how-to.md).
 - [x] Five new MCP tools: describe\_table, lineage, pipeline\_status, platform\_health, search\_incident\_reports (done 2026-11-04; architecture v3.3)
-- [ ] AI operating system and Lakehouse operating system model (wrolfgar, 2026-11-04). Scope not defined yet: ask wrolfgar what each model should cover before starting.
+- [ ] AI operating system and Lakehouse operating system model (wrolfgar, 2026-11-04). Parked as a reminder (wrolfgar, 2026-11-05): "more philosophical or metaphysical than real and it can wait for a good while. I just don't want to forget about them." Not next work; wrolfgar raises it when ready.
 - [ ] Python mini-course between course 1 and course 2 (wrolfgar, 2026-11-04): the Python behind course 1's cleaning, for students completely new to Python, value first and then the how. Parts 0 (Open the Box, c4a2150), 1 (Strings, a8917cc) and 2 (Lists, Dictionaries and Loops, 0d7a639) built 2026-11-04, parts 3 (pandas, 53289d4), 4 (Patterns, 0ed3a48) and 5 (Your Own Session 2, 37c9e00) on 2026-11-05, in homelake. All six parts built; tagged course1-v1.4 and course 2's pin moved there on 2026-11-05 (lakehouse 0c4b75d).
+
+## 2026-11-05 · A user guide for the whole lakehouse
+
+**Result.** New Claude Doc, [Home Lakehouse User Guide](https://claude.ai/artifact/WomucUhsPgex2v7dzjJo6h): an end user's guide to querying the whole lakehouse, the twelve MCP tools, finding data, gold tables and Cube models, data products, processing and quality gates, business and processing rules, new sources, new pipelines, and AI, BI and dashboards, with a quick reference.
+
+**Why.** wrolfgar asked for a guide that teaches an end user all of that.
+
+**What we found.** `daily_lake` builds every dbt model not tagged `world` (`AssetSelection.all() - WORLD_ASSETS`), so a dbt-only source or pipeline needs no Dagster code. Every job gets the success and failure sensors. Cube's SQL port is on the Compose network only, so outside BI tools can't reach it yet.
+
+**What verified it.** The guide's example queries were run on the live lake and Cube before they went in. Two were fixed. `ops.load_runs` has no row since October 29, so snapshots now come from `lake.snapshots()`. `period_status` needs a group by month.
+
+**Still open.** No repo copy yet: adding it to `docs/` needs a `scrub.py` entry.
+
+## 2026-11-05 · The Python mini-course runs in Databricks
+
+**Result.** wrolfgar confirmed the mini-course notebooks run in Databricks: "The intro to python notebooks run in Databricks".
+
+**Why it matters.** Until now they had only been run in the course's Jupyter image on the VM, which can't reach Databricks. Their setup cell is course 1's, so this confirms the course files are found and the data is built there too.
+
+**What we did.** Recorded it here and in memory. Nothing in the repo changed; the release stays `course1-v1.4`.
 
 ## 2026-11-05 · Course 1 tagged course1-v1.4, and course 2's pin moved there
 

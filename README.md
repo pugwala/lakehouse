@@ -34,6 +34,7 @@ like course 1's tags; [the Plan](docs/lakehouse-plan.md#architecture-versions) l
   answer keys.
 - [`enterprise/`](enterprise/README.md): the same ideas on an enterprise Databricks workspace. Course 1's track ends with a pipeline and two handed-over deliveries; this one takes it on: the next delivery, governance, a scheduled job that alerts, and monitoring, with its own helpers.
 - [`docs/how-to.md`](docs/how-to.md): how to use the whole lakehouse, start here.
+- [`docs/user-guide.md`](docs/user-guide.md): the end user's guide, step by step: query, ask the agent, build models and data products, check the gates, add rules, sources, pipelines and dashboards.
 - [`docs/`](docs/README.md): snapshots of the lab's working documents (the how-to, the plan, the handoff, the work log,
   the ontology guide and the course boundary).
 - `lakehouse/ci/checks.sh`: every check that needs no secrets and no running stack; GitHub runs it on every push.
