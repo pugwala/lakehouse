@@ -123,6 +123,17 @@ Opening `/mcp` in a browser shows a page that says *The lakehouse AI agent is ru
 
 Then just ask, for example: *"How many people are in custody by custody level, and is October final?"* The agent picks the tools.
 
+**Heroes and villains by name.** A hero's or villain's alias is their *common name* (SUPERMAN, WOLVERINE). It is public, like a stage name, so answers use it instead of a SID. Their real name, birth date and SID stay restricted. Ask *"Which villains were in the most fights?"* or *"How many charges did WOLVERINE face?"*. In SQL, `fight_participants` and `court_outcomes` have `common_name` and `person_role`:
+
+```sql
+SELECT common_name, MEASURE(participations), MEASURE(people_involved)
+FROM fight_participants
+WHERE person_role = 'villain' AND common_name IS NOT NULL
+GROUP BY 1 ORDER BY 2 DESC LIMIT 5
+```
+
+Several people can share one common name: copycats, or five Green Lanterns. So count people with `people_involved` or `people_charged`, never by name. Incident reports keep common names as written, so `search_incident_reports` finds a hero by name, while real names still read [PERSON NAME].
+
 **The tools, each with a real answer from November 4, 2026:**
 
 | Tool | What it's for | Ask it | It answered |
