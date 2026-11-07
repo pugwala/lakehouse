@@ -89,13 +89,13 @@ def test_reports_without_mentions_are_unchanged(con):
 
 
 def test_one_label_per_personal_mention(con):
-    """Across every report, the labels number exactly the personal mentions: 816,360 at M (1,893,406 mentions, less
-    1,077,046 aliases, which stay as written). No report says [ALIAS] any more."""
+    """Across every report, the labels number exactly the personal mentions: 815,328 at M (1,892,094 mentions, less
+    1,076,766 aliases, which stay as written). No report says [ALIAS] any more."""
     labels = con.execute(
         "SELECT sum(len(regexp_extract_all(narrative, '\\[(PERSON NAME|SID|BIRTH DATE|PHONE)\\]'))) "
         "FROM lake.world_gold.incident_report_redacted").fetchone()[0]
     mentions = con.execute(f"SELECT count(*) FROM read_parquet('{MENTIONS}') WHERE kind <> 'alias'").fetchone()[0]
-    assert labels == mentions == 816_360
+    assert labels == mentions == 815_328
     assert con.execute("SELECT count(*) FROM lake.world_gold.incident_report_redacted "
                        "WHERE contains(narrative, '[ALIAS]')").fetchone()[0] == 0
 

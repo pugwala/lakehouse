@@ -64,3 +64,37 @@ def test_the_agent_reads_reports_with_aliases_kept():
     assert len(narratives) == 50 and not any("[ALIAS]" in n for n in narratives)
     assert any("[PERSON NAME]" in n for n in narratives)          # real names still replaced
     assert any(' aka "' in n for n in narratives)                  # '[PERSON NAME] aka "Amber Heron"': the alias shows
+
+
+# --- the famous cast (chunk 2): the names everyone knows, as heroes and villains, at the top of the charts -------
+
+FAMOUS_VILLAINS = ["JOKER", "MAGNETO", "LOKI"]
+
+
+@pytest.mark.parametrize("role, names", [("hero", FAMOUS_HEROES), ("villain", FAMOUS_VILLAINS)])
+def test_the_famous_are_in_the_fights_on_their_own_side(cube, role, names):
+    """SUPERMAN, WONDER WOMAN and WOLVERINE fight as heroes; JOKER, MAGNETO and LOKI as villains."""
+    got = dict(rows(cube, "SELECT common_name, MEASURE(participations) FROM fight_participants "
+                          f"WHERE person_role = '{role}' AND common_name IN ({', '.join(repr(n) for n in names)}) GROUP BY 1"))
+    assert set(got) == set(names), got
+
+
+@pytest.mark.parametrize("role", ["hero", "villain"])
+def test_the_famous_top_the_fight_charts(cube, role):
+    """The five heroes and the five villains in the most fights are all from the famous cast."""
+    from lakehouse.universe import world
+    top = rows(cube, "SELECT common_name, MEASURE(participations) FROM fight_participants WHERE person_role = "
+                     f"'{role}' AND common_name IS NOT NULL GROUP BY 1 ORDER BY 2 DESC LIMIT 5")
+    assert {n for n, _ in top} <= set(world.FAMOUS[role]), top
+
+
+def test_the_agent_names_the_busiest_villain():
+    """query_metric's villain chart, the way Claude asks it, leads with a famous villain."""
+    err, result, text = call("query_metric", metric="participations", group_by=["common_name"],
+                             filters=[{"dimension": "person_role", "operator": "equals", "values": ["villain"]}],
+                             limit=1000)
+    assert not err, text
+    named = [r for r in result["rows"] if next(v for k, v in r.items() if k.endswith("common_name"))]
+    top = max(named, key=lambda r: next(v for k, v in r.items() if k.endswith("participations")))
+    assert next(v for k, v in top.items() if k.endswith("common_name")) in FAMOUS_VILLAINS + [
+        "LEX LUTHOR", "THANOS", "DOCTOR DOOM", "GREEN GOBLIN", "HARLEY QUINN"]

@@ -2,7 +2,7 @@
 
 # How to Use the Home Lakehouse
 
-Updated Nov 5, 2026 · @wrolfgar
+Updated Nov 7, 2026 · @wrolfgar
 
 ## Start here
 
@@ -122,7 +122,7 @@ Then ask in plain words: "how many people are in custody by custody level, and i
 | `lineage` | `world_silver.charge` | 3 tables downstream; a change reaches the `court_outcomes` view and the court-outcomes product |
 | `pipeline_status` | job `daily_lake` | Runs at 05:00 Central; last success 17:10 CST; the 16:58 run failed (a test guard, fixed) |
 | `platform_health` | (no arguments) | healthy: 10 sites and 7 targets up, no alerts, Watchdog beating; `/lake` 4.8% used, memory 71% free, certificate 80 days, backups 17 hours old |
-| `search_incident_reports` | `bridge`, witness statements | 2,017 reports; the newest: "I saw the whole street fight at National City Bridge 6987. There was this villain, \[ALIAS\]..." |
+| `search_incident_reports` | `bridge`, witness statements | 2,017 reports; the newest: "I saw the whole street fight at National City Bridge 6987. There was this villain, Neuronova..." |
 
 **Good questions to try.**
 
@@ -251,10 +251,10 @@ Course 1's 100,000 records are one flat list. The expanded world builds everythi
 
 Each exercise is checked against the answer keys, never against a stored solution. `lakehouse/sessions/README.md` has the facilitator's numbers.
 
-**The incident reports.** They name people on purpose: names, aliases, SIDs, birth dates and witnesses' phone numbers. A **mention key** says where each of the 1,893,406 details sits.
+**The incident reports.** They name people on purpose: names, aliases, SIDs, birth dates and witnesses' phone numbers. A **mention key** says where each of the 1,892,094 details sits.
 
 - The raw text stays in bronze and silver, for engineering only.
-- `world_gold.incident_report_redacted` replaces every marked detail with `[PERSON NAME]`, `[ALIAS]`, `[SID]`, `[BIRTH DATE]` or `[PHONE]`.
+- `world_gold.incident_report_redacted` replaces every marked personal detail with `[PERSON NAME]`, `[SID]`, `[BIRTH DATE]` or `[PHONE]`. Heroes' and villains' common names (their aliases) stay as written, since they're public, like a stage name.
 - Cube's `incident_reports` view, and the MCP server's `search_incident_reports`, read only that redacted copy.
 - It keeps its personal-data tag: redaction by a finder always misses something.
 

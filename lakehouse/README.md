@@ -821,6 +821,16 @@ then builds:
 Where the lake doesn't know (2,355 of today's people have no sentence date on any record), the dependent dates are
 null rather than made up. Tests: `pytest lakehouse/tests/test_universe_people.py` (12, against the lake).
 
+**The famous cast (common names, 2026-11-07).** So a query answers with names people know, `world.FAMOUS` casts 25
+famous heroes (SUPERMAN, WONDER WOMAN, WOLVERINE, BATMAN, ...) and 25 famous villains (JOKER, MAGNETO, LOKI, LEX
+LUTHOR, ...) as the first new heroes and new villains, born 1955-1980. `fights.py` keeps them out of the uniform draws
+and seats them as the lead hero or lead villain of a share of fights (`FAMOUS_SHARE` at M, divided by the scale
+factor, so their careers are as long at every scale), the better known more often (weight 1/sqrt(rank)). At M they
+top the charts: SUPERMAN 6,583 fights and JOKER 6,457, against about 1,400 for the busiest procedural villain. Course 1's
+own people keep their aliases, so its SUPERMAN, WONDER WOMAN and WOLVERINE are villain copycats. Gold shows a hero's
+or villain's alias as `world_gold.dim_person.common_name`, public like a stage name (the glossary's Common Name).
+Tests: `pytest lakehouse/tests/test_universe_famous.py` (7) and `acceptance/test_common_names_live.py`.
+
 **Chunk 4, fights (`universe/fights.py`).** The same build command now goes on to the fights (about 8 s for the
 whole world at M):
 

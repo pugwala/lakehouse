@@ -78,7 +78,7 @@ def mission_member(stream, start, n, ctx):
     ids = np.arange(start, start + n, dtype=np.int64)
     mis = fights.owner(m["mem_off"], ids)
     j = ids - m["mem_off"][mis]
-    who, when = fights.pools(ctx["person_dir"], ctx["person_power_dir"])["hero"]
+    who, when = fights.pools(ctx["person_dir"], ctx["person_power_dir"])["every_hero"]
     active = np.searchsorted(when, m["start"][mis], side="right")
     if (active < m["members"][mis]).any():
         raise ValueError("too few heroes about on some day for the missions planned")

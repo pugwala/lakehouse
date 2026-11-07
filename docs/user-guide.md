@@ -143,13 +143,13 @@ Several people can share one common name: copycats, or five Green Lanterns. So c
 | `define_term` | A business definition | `SID` | "One SID for life, the same on every record that person has"; synonyms SID, person ID |
 | `business_rules` | The rules about a term | about `fight` | "A charge follows its fight, and its outcome follows the charge", enforced by a dbt test |
 | `data_product_info` | A product's promise and whether to trust this month | `court outcomes` | Its question, tables, views and contract; October provisional, waiting on the Courts liaison; fresh |
-| `data_quality` | Quality counts by area | area `world` | 1,167,509 values flagged in world silver, most in `damage`; no quality alert firing |
+| `data_quality` | Quality counts by area | area `world` | 1,167,508 values flagged in world silver, most in `damage`; no quality alert firing |
 | `find_by_tags` | Tables and columns by their tags | `Governance.CJIS` and `PIIType.FreeText` | 5 tables, including the incident reports in bronze, silver and redacted gold |
 | `describe_table` | One table: columns, tags, products, contract | `fct_charge` | 12 columns, two personal; delivered by court-outcomes; monthly contract |
 | `lineage` | What a table or metric is built from, and what a change would reach | `people_in_custody` | 2 views reading 4 tables, 12 tables upstream |
 | `pipeline_status` | Whether the jobs ran | job `daily_lake` | Runs at 05:00 Central; last success and any failure |
 | `platform_health` | Whether the platform is healthy | (nothing) | Healthy: 10 sites and 7 targets up, no alerts, disk and backups fine |
-| `search_incident_reports` | The incident reports, with every personal detail replaced | `bridge`, witness statements | 2,017 reports, names shown as `[PERSON NAME]`, `[ALIAS]` and so on |
+| `search_incident_reports` | The incident reports, with every personal detail replaced (common names kept) | `bridge`, witness statements | 2,017 reports, heroes and villains by their common names, real names shown as `[PERSON NAME]` and so on |
 
 **Good questions to try:**
 

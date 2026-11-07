@@ -171,6 +171,29 @@ def team(stream, start, n, ctx):
 
 # ---- people -----------------------------------------------------------------------------------------------------
 
+# The famous cast (common names, chunk 2, 2026-11-07): heroes and villains everyone knows, so a query's answer means
+# something to a student. Best known first: fights.py places them as lead heroes and lead villains, the better known
+# more often (weight 1/sqrt(rank)). Each is the first new person of their block, so every scale has them; course 1's
+# own people keep their aliases, so a few of today's villains are copycats of a famous hero.
+FAMOUS = {
+    "hero": ["SUPERMAN", "WONDER WOMAN", "WOLVERINE", "BATMAN", "SPIDER-MAN", "IRON MAN", "CAPTAIN AMERICA", "THOR",
+             "BLACK WIDOW", "STORM", "THE FLASH", "AQUAMAN", "HULK", "BLACK PANTHER", "CAPTAIN MARVEL", "DAREDEVIL",
+             "CYCLOPS", "JEAN GREY", "ROBIN", "SUPERGIRL", "HAWKEYE", "DOCTOR STRANGE", "SCARLET WITCH", "NIGHTWING",
+             "MARTIAN MANHUNTER"],
+    "villain": ["JOKER", "MAGNETO", "LOKI", "LEX LUTHOR", "THANOS", "DOCTOR DOOM", "GREEN GOBLIN", "HARLEY QUINN",
+                "DARKSEID", "RED SKULL", "ULTRON", "VENOM", "TWO-FACE", "THE PENGUIN", "THE RIDDLER", "KINGPIN",
+                "MYSTIQUE", "SINESTRO", "BANE", "CATWOMAN", "DOCTOR OCTOPUS", "BRAINIAC", "SABRETOOTH", "POISON IVY",
+                "SCARECROW"],
+}
+FAMOUS_BORN = (date(1955, 1, 1), date(1980, 12, 31))   # so most hold their powers by the late 1990s
+
+
+def famous_ids(scale_name: str, role: str) -> np.ndarray:
+    """The famous cast's person ids for a role ("hero" or "villain"), best known first."""
+    lo = role_bounds(scale_name)[role][0]
+    return np.arange(lo, lo + len(FAMOUS[role]), dtype=np.int64)
+
+
 def role_bounds(scale_name: str) -> dict:
     """{role: (first person_id, last + 1)} for the new people's blocks, which follow today's people."""
     bounds, at = {}, scale.CORE_PEOPLE
@@ -211,6 +234,17 @@ def person(stream, start, n, ctx):
     birth_valid = np.ones(n, dtype=bool)
     home = stream.integers(0, len(names), n)
     sid = np.zeros(n, dtype=np.int64)
+
+    # The famous cast: their common names, and births early enough for a long career (drawn above like everyone's,
+    # then replaced, so nobody else's values move).
+    for r in ("hero", "villain"):
+        at = famous_ids(ctx["scale"], r)
+        hit = np.isin(ids, at)
+        if hit.any():
+            rank = ids[hit] - at[0]
+            alias[hit] = np.asarray(FAMOUS[r], dtype=object)[rank]
+            lo, hi = days(FAMOUS_BORN[0]), days(FAMOUS_BORN[1])
+            birth[hit] = lo + (ids[hit] * 7_919) % (hi - lo)
 
     k = int(is_core.sum())
     if k:

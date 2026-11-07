@@ -26,7 +26,7 @@ import duckdb
 import numpy as np
 import pyarrow as pa
 
-from . import scale
+from . import scale, world
 from .rng import stream
 from .world import TODAY, as_date, column, days, pick, read
 
@@ -35,6 +35,9 @@ FIRST_DAY = days(date(1996, 1, 1))
 NEVER = np.iinfo(np.int32).max            # "no first power day" in the pools
 SIDES = ("villain", "hero", "civilian")
 NEW_VILLAIN_SHARE = 0.6   # chance a fight's random villain slot goes to a new villain (chunk 5b, wrolfgar's option B)
+FAMOUS_SHARE = {"hero": 0.06, "villain": 0.05}   # at M: chance a fight's lead hero / lead villain is one of the famous
+# cast. famous_share() divides it by the scale factor, so the cast, a fixed 25 a side, leads about as many fights at
+# every scale, as each uniformly drawn person does.
 OUTCOMES = np.asarray(["captured", "partial", "escaped"], dtype=object)
 INCIDENT_TYPES = {"street fight": 0.28, "robbery": 0.2, "heist": 0.12, "rampage": 0.1, "standoff": 0.1,
                   "sabotage": 0.08, "abduction": 0.07, "breakout": 0.05}
@@ -78,9 +81,11 @@ def pools(person_dir: str, person_power_dir: str) -> dict:
     role, birth = column(people, "role"), column(people, "birth_date", fill=0).astype(np.int64)
     start = first_power_day(person_dir, person_power_dir)
     todays = np.arange(len(role)) < scale.CORE_PEOPLE
+    famous = famous_mask(person_dir)
     ready = {"core_villain": (role == "villain") & todays & (start < NEVER),
-             "new_villain": (role == "villain") & ~todays & (start < NEVER),
-             "hero": np.isin(role, ["hero", "secondary_hero"]) & (start < NEVER),
+             "new_villain": (role == "villain") & ~todays & ~famous & (start < NEVER),
+             "hero": np.isin(role, ["hero", "secondary_hero"]) & ~famous & (start < NEVER),
+             "every_hero": np.isin(role, ["hero", "secondary_hero"]) & (start < NEVER),   # missions: famous too
              "civilian": role == "civilian"}
     out = {}
     for side, ok in ready.items():
@@ -89,6 +94,42 @@ def pools(person_dir: str, person_power_dir: str) -> dict:
         order = np.lexsort((ids, when))
         out[side] = (ids[order], when[order])
     return out
+
+
+@lru_cache(maxsize=None)
+def famous_mask(person_dir: str) -> np.ndarray:
+    """For every person, whether they are one of the famous cast (world.FAMOUS): kept out of the uniform pools,
+    placed instead as fights' lead heroes and villains (famous_pools, plan)."""
+    people = read(person_dir)
+    alias, role = column(people, "alias"), column(people, "role")
+    todays = np.arange(len(role)) < scale.CORE_PEOPLE
+    out = np.zeros(len(role), dtype=bool)
+    for r, cast in world.FAMOUS.items():
+        out |= (role == r) & ~todays & np.isin(alias, cast)
+    return out
+
+
+@lru_cache(maxsize=None)
+def famous_pools(person_dir: str, person_power_dir: str) -> dict:
+    """{"hero" | "villain": (person ids, the day each could first fight, cumulative fame weights)}, sorted by that
+    day, so the famous about on day t are the first searchsorted(days, t, "right"), and a weighted pick among them
+    is a search in the cumulative weights. Fame weight 1/sqrt(rank + 1): the best known lead the most fights."""
+    people = read(person_dir)
+    alias = column(people, "alias")
+    start = first_power_day(person_dir, person_power_dir)
+    out = {}
+    for r, cast in world.FAMOUS.items():
+        ids = np.flatnonzero(famous_mask(person_dir) & (column(people, "role") == r) & (start < NEVER))
+        rank = np.asarray([cast.index(a) for a in alias[ids]], dtype=np.float64)
+        order = np.lexsort((ids, start[ids]))
+        out[r] = (ids[order], start[ids][order], np.cumsum(1.0 / np.sqrt(rank[order] + 1.0)))
+    return out
+
+
+def famous_share(role: str, scale_name: str) -> float:
+    """The chance a fight's lead of this role is famous at a scale: FAMOUS_SHARE (set at M) over the scale's
+    factor, at most one in two."""
+    return min(0.5, FAMOUS_SHARE[role] / scale.check(scale_name))
 
 
 # ---- the plan ---------------------------------------------------------------------------------------------------
@@ -146,6 +187,18 @@ def plan(seed: int, scale_name: str, records_path: str, people_path: str, person
     records = (np.arange(n_inc) < CORE_RECORDS).astype(np.int64)
     new_about = np.searchsorted(pools(person_dir, person_power_dir)["new_villain"][1], day, side="right")
     out["n_new"] = np.minimum(rs.binomial(nv - records, NEW_VILLAIN_SHARE), new_about)
+    # Drawn after that: each fight's famous lead hero and lead villain, or -1. A famous lead hero needs a hero in the
+    # fight; a famous lead villain takes villain slot 0 of a fight that isn't one of today's records (theirs is the
+    # record's villain). Picked by fame among the famous already holding a power that day.
+    lead_ok = {"hero": nh >= 1, "villain": (np.arange(n_inc) >= CORE_RECORDS) & (nv >= 1)}
+    for r in ("hero", "villain"):
+        ids, when, weight = famous_pools(person_dir, person_power_dir)[r]
+        about = np.searchsorted(when, day, side="right")
+        take = lead_ok[r] & (rs.random(n_inc) < famous_share(r, scale_name)) & (about > 0)
+        u = rs.random(n_inc)
+        reach = weight[np.maximum(about, 1) - 1] if len(ids) else np.zeros(n_inc)
+        pick_at = np.minimum(np.searchsorted(weight, u * reach, side="right"), np.maximum(about, 1) - 1)
+        out[f"famous_{r}"] = np.where(take, ids[pick_at] if len(ids) else -1, -1).astype(np.int64)
     return out
 
 
@@ -228,6 +281,11 @@ def participant(stream, start, n, ctx):
     clash = np.flatnonzero(core & (j > 0) & (person == record))
     if len(clash):
         person[clash] = drawn(clash, 0, "core_villain", (nv - n_new)[clash])
+    # The famous leads: slot 0 of their side. They are in no uniform pool, so nobody appears twice.
+    for sc, r in ((1, "hero"), (0, "villain")):
+        lead = p[f"famous_{r}"][inc]
+        seat = (side == sc) & (j == 0) & (lead >= 0)
+        person[seat] = lead[seat]
 
     outcome = p["outcome"][inc]
     caught = np.where(outcome == 0, True, np.where(outcome == 2, False,
