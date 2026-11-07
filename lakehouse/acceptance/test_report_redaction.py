@@ -3,9 +3,10 @@
     docker compose --profile core exec -T jupyter pytest -q lakehouse/acceptance/test_report_redaction.py
 
 The reports name people on purpose (Priority 5): names, aliases, SIDs, birth dates and witnesses' phone numbers, for
-the text sessions to find. The MCP server's search_incident_reports must never hand those to an agent, so it reads this
-gold table through Cube instead: each detail the mention key marks becomes [PERSON NAME], [ALIAS], [SID],
-[BIRTH DATE] or [PHONE], and every other character is kept. The checks below rebuild the redaction in Python from
+the text sessions to find. The MCP server's search_incident_reports must never hand the personal ones to an agent, so
+it reads this gold table through Cube instead: each personal detail the mention key marks becomes [PERSON NAME], [SID],
+[BIRTH DATE] or [PHONE], and every other character is kept. Aliases stay as written: a hero's or villain's common name
+is public, like a stage name (2026-11-07). The checks below rebuild the redaction in Python from
 silver and the mention key, and look for anything that still reads like a SID or a phone number.
 """
 import random
@@ -16,8 +17,7 @@ import pytest
 from lakehouse import lake
 
 MENTIONS = "/lake/landing/universe/M/mention_key/incident_report/*.parquet"
-LABELS = {"person_name": "[PERSON NAME]", "alias": "[ALIAS]", "sid": "[SID]", "birth_date": "[BIRTH DATE]",
-          "phone": "[PHONE]"}
+LABELS = {"person_name": "[PERSON NAME]", "sid": "[SID]", "birth_date": "[BIRTH DATE]", "phone": "[PHONE]"}
 SAMPLE = 3000
 
 
@@ -30,10 +30,11 @@ def con():
 
 
 def redact(narrative, mentions):
-    """The narrative with each (start, end, kind) span replaced by its label: the rule, written plainly."""
+    """The narrative with each personal (start, end, kind) span replaced by its label, and each alias kept as
+    written: the rule, written plainly."""
     out, at = [], 0
     for start, end, kind in sorted(mentions):
-        out += [narrative[at:start], LABELS[kind]]
+        out += [narrative[at:start], narrative[start:end] if kind == "alias" else LABELS[kind]]
         at = end
     return "".join(out) + narrative[at:]
 
@@ -77,22 +78,26 @@ def test_a_sample_matches_the_rule_character_for_character(con):
 
 
 def test_reports_without_mentions_are_unchanged(con):
-    """A report the key marks nothing in (a desk report, "SEE ATTACHED", an empty one) reads exactly as in silver."""
+    """A report the key marks nothing personal in (a desk report, "SEE ATTACHED", one naming only aliases, an empty
+    one) reads exactly as in silver."""
     differs = con.execute(f"""
         SELECT count(*) FROM lake.world_silver.incident_report s
         JOIN lake.world_gold.incident_report_redacted g USING (incident_report_id)
-        WHERE s.incident_report_id NOT IN (SELECT incident_report_id FROM read_parquet('{MENTIONS}'))
+        WHERE s.incident_report_id NOT IN (SELECT incident_report_id FROM read_parquet('{MENTIONS}') WHERE kind <> 'alias')
           AND s.narrative IS DISTINCT FROM g.narrative""").fetchone()[0]
     assert differs == 0
 
 
-def test_one_label_per_mention(con):
-    """Across every report, the labels number exactly the mentions: 1,893,406 at M."""
+def test_one_label_per_personal_mention(con):
+    """Across every report, the labels number exactly the personal mentions: 816,360 at M (1,893,406 mentions, less
+    1,077,046 aliases, which stay as written). No report says [ALIAS] any more."""
     labels = con.execute(
-        "SELECT sum(len(regexp_extract_all(narrative, '\\[(PERSON NAME|ALIAS|SID|BIRTH DATE|PHONE)\\]'))) "
+        "SELECT sum(len(regexp_extract_all(narrative, '\\[(PERSON NAME|SID|BIRTH DATE|PHONE)\\]'))) "
         "FROM lake.world_gold.incident_report_redacted").fetchone()[0]
-    mentions = con.execute(f"SELECT count(*) FROM read_parquet('{MENTIONS}')").fetchone()[0]
-    assert labels == mentions == 1_893_406
+    mentions = con.execute(f"SELECT count(*) FROM read_parquet('{MENTIONS}') WHERE kind <> 'alias'").fetchone()[0]
+    assert labels == mentions == 816_360
+    assert con.execute("SELECT count(*) FROM lake.world_gold.incident_report_redacted "
+                       "WHERE contains(narrative, '[ALIAS]')").fetchone()[0] == 0
 
 
 @pytest.mark.parametrize("what, pattern", [("a SID", r"SID[ #:]*\d"), ("a 555-01xx phone", r"555[-. ]?01\d\d")])

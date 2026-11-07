@@ -163,23 +163,24 @@ def test_a_month_rebuilt_alone_gives_the_same_rows(world):
 
 
 def test_gold_reports_replace_every_marked_detail(world):
-    """world_gold.incident_report_redacted: every silver report, one label per mention, no marked detail left in its
-    report, and a report the key marks nothing in exactly as silver has it."""
+    """world_gold.incident_report_redacted: every silver report, one label per personal mention, no marked personal
+    detail left in its report, aliases kept as written (a hero's or villain's common name is public, 2026-11-07),
+    and a report the key marks nothing personal in exactly as silver has it."""
+    personal = "read_parquet('$root/mention_key/incident_report/*.parquet') WHERE kind <> 'alias'"
     assert one(world, "SELECT count(*) FROM world_gold.incident_report_redacted") == one(
         world, "SELECT count(*) FROM world_silver.incident_report")
-    labels = one(world, "SELECT sum(len(regexp_extract_all(narrative, '\\[(PERSON NAME|ALIAS|SID|BIRTH DATE|PHONE)\\]'))) "
+    labels = one(world, "SELECT sum(len(regexp_extract_all(narrative, '\\[(PERSON NAME|SID|BIRTH DATE|PHONE)\\]'))) "
                         "FROM world_gold.incident_report_redacted")
-    assert labels == one(world, "SELECT count(*) FROM read_parquet('$root/mention_key/incident_report/*.parquet')") > 0
-    assert one(world, """SELECT count(*) FROM read_parquet('$root/mention_key/incident_report/*.parquet') m
-                         JOIN world_gold.incident_report_redacted g USING (incident_report_id)
-                         WHERE contains(g.narrative, m.as_written)""") == 0
-    assert one(world, """SELECT count(*) FROM world_silver.incident_report s
-                         JOIN world_gold.incident_report_redacted g USING (incident_report_id)
-                         WHERE s.incident_report_id NOT IN (SELECT incident_report_id
-                               FROM read_parquet('$root/mention_key/incident_report/*.parquet'))
-                           AND s.narrative IS DISTINCT FROM g.narrative""") == 0
-    labels = {"person_name": "[PERSON NAME]", "alias": "[ALIAS]", "sid": "[SID]", "birth_date": "[BIRTH DATE]",
-              "phone": "[PHONE]"}
+    assert labels == one(world, f"SELECT count(*) FROM {personal}") > 0
+    assert one(world, "SELECT count(*) FROM world_gold.incident_report_redacted WHERE contains(narrative, '[ALIAS]')") == 0
+    assert one(world, f"""SELECT count(*) FROM (SELECT * FROM {personal}) m
+                          JOIN world_gold.incident_report_redacted g USING (incident_report_id)
+                          WHERE contains(g.narrative, m.as_written)""") == 0
+    assert one(world, f"""SELECT count(*) FROM world_silver.incident_report s
+                          JOIN world_gold.incident_report_redacted g USING (incident_report_id)
+                          WHERE s.incident_report_id NOT IN (SELECT incident_report_id FROM {personal})
+                            AND s.narrative IS DISTINCT FROM g.narrative""") == 0
+    labels = {"person_name": "[PERSON NAME]", "sid": "[SID]", "birth_date": "[BIRTH DATE]", "phone": "[PHONE]"}
     spans = {}
     for rid, start, end, kind in query(world, "SELECT incident_report_id, start_pos, end_pos, kind "
                                               "FROM read_parquet('$root/mention_key/incident_report/*.parquet')"):
@@ -189,6 +190,17 @@ def test_gold_reports_replace_every_marked_detail(world):
     for rid, marks in spans.items():   # character for character, as the rule reads in plain Python
         out, at = [], 0
         for start, end, kind in sorted(marks):
-            out += [silver[rid][at:start], labels[kind]]
+            out += [silver[rid][at:start], silver[rid][start:end] if kind == "alias" else labels[kind]]
             at = end
         assert gold[rid] == "".join(out) + silver[rid][at:], rid
+
+
+def test_gold_gives_heroes_and_villains_their_common_name(world):
+    """world_gold.dim_person.common_name: each person's alias as silver cleansed it (from their first entry, the one
+    whose person_id is the person_key), never for a civilian; no real name or birth date comes with it."""
+    assert one(world, """SELECT count(*) FROM world_gold.dim_person g
+                         JOIN world_silver.person s ON s.person_id = g.person_key
+                         WHERE g.common_name IS DISTINCT FROM s.alias""") == 0
+    assert one(world, "SELECT count(*) FROM world_gold.dim_person WHERE role = 'civilian' AND common_name IS NOT NULL") == 0
+    named = one(world, "SELECT count(*) FROM world_gold.dim_person WHERE role IN ('hero', 'villain') AND common_name IS NOT NULL")
+    assert named > 0

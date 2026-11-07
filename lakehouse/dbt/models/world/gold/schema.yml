@@ -33,8 +33,8 @@ models:
   - name: longitude
     data_type: double
 - name: wg_dim_person
-  description: One row per person, duplicates resolved (person_key, the lowest person_id among a person's entries). No names
-    or birth dates, which stay in world_silver.person.
+  description: One row per person, duplicates resolved (person_key, the lowest person_id among a person's entries), with a
+    hero's or villain's common name. No real names or birth dates, which stay in world_silver.person.
   config:
     alias: dim_person
     contract:
@@ -58,6 +58,12 @@ models:
     data_type: bigint
   - name: entries
     data_type: integer
+  - name: common_name
+    data_type: varchar
+    description: >
+      A hero's or villain's common name (SUPERMAN, WOLVERINE), their alias as silver cleansed it; empty for
+      civilians. Public, like a stage name. Several people can share one (copycats, five Green Lanterns), so
+      count people by person_key, never by common name.
 - name: wg_dim_power
   description: One row per power in the catalog.
   config:

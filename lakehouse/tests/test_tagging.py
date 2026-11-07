@@ -40,10 +40,11 @@ def test_a_column_name_rule_tags_the_column(column, want):
     assert names(tags.column_tags(column, "VARCHAR", [])) == {want}
 
 
-@pytest.mark.parametrize("column", ["name", "unit_name", "city_name", "codename", "known_aliases", "team_id",
+@pytest.mark.parametrize("column", ["name", "unit_name", "city_name", "codename", "known_aliases", "common_name", "team_id",
                                     "offense_code", "dob_flag", "first_sentence_date"])
 def test_near_misses_are_left_alone(column):
-    """Names of places, units, missions and groups, ids of things, and flags about a value aren't personal data."""
+    """Names of places, units, missions and groups, a hero's or villain's common name (public, like a stage name),
+    ids of things, and flags about a value aren't personal data."""
     assert tags.column_tags(column, "VARCHAR", []) == []
 
 

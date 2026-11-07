@@ -75,6 +75,9 @@ cubes:
       - name: field_incidents_readiness
         relationship: many_to_one
         sql: "last_day({CUBE}.incident_month) = {field_incidents_readiness}.month_end"
+      - name: world_people
+        relationship: many_to_one
+        sql: "{CUBE}.person_key = {world_people}.person_key"
     dimensions:
       - name: participant_id
         sql: participant_id
@@ -101,6 +104,28 @@ cubes:
         sql: person_key
         type: count_distinct
         description: Distinct people (person keys) in the fights; never add these up across months or groups.
+
+  # The world's people, by their common names: world_gold.dim_person, one row per resolved person. A hero's or
+  # villain's common name is public, like a stage name; real names, birth dates and SIDs are not, and aren't here.
+  - name: world_people
+    sql_table: lake.world_gold.dim_person
+    public: false
+    description: One row per person in the expanded world, duplicates resolved (world_gold.dim_person).
+    dimensions:
+      - name: person_key
+        sql: person_key
+        type: number
+        primary_key: true
+      - name: common_name
+        sql: common_name
+        type: string
+        description: >
+          A hero's or villain's common name (SUPERMAN, WOLVERINE), empty for civilians. Several people can share one
+          (copycats, five Green Lanterns), so count people with the people measures, never by name.
+      - name: person_role
+        sql: role
+        type: string
+        description: What the person is in the world (villain, new villain, hero, secondary hero, civilian).
 
   - name: world_damage
     sql_table: lake.world_gold.fct_damage
@@ -165,6 +190,9 @@ cubes:
       - name: court_outcomes_readiness
         relationship: many_to_one
         sql: "last_day({CUBE}.decided_on) = {court_outcomes_readiness}.month_end"
+      - name: world_people
+        relationship: many_to_one
+        sql: "{CUBE}.person_key = {world_people}.person_key"
     dimensions:
       - name: charge_id
         sql: charge_id
@@ -238,7 +266,7 @@ cubes:
   - name: world_reports
     sql_table: lake.world_gold.incident_report_redacted
     public: false
-    description: One row per incident report, names, aliases, SIDs, birth dates and phones replaced.
+    description: One row per incident report, names, SIDs, birth dates and phones replaced (aliases, which are public, kept).
     joins:
       - name: world_incidents
         relationship: many_to_one
@@ -264,7 +292,7 @@ cubes:
       - name: narrative
         sql: narrative
         type: string
-        description: What was written, each personal detail replaced by [PERSON NAME], [ALIAS], [SID], [BIRTH DATE] or [PHONE].
+        description: What was written, each personal detail replaced by [PERSON NAME], [SID], [BIRTH DATE] or [PHONE]; aliases kept.
     measures:
       - name: reports
         type: count
@@ -321,12 +349,15 @@ views:
 
   - name: fight_participants
     description: >
-      Who took part in the fights: by month, side, role and what became of them. Count people with
-      people_involved (distinct person keys, never summed); participations counts each person once per fight.
-    meta: {product: field-incidents, reads: [mart_readiness.period_readiness, world_gold.fct_participation]}
+      Who took part in the fights: by month, side, role in the fight, what became of them, and who they are by
+      common name (SUPERMAN, JOKER) and person_role (hero, villain, ...). Count people with people_involved
+      (distinct person keys, never summed); participations counts each person once per fight.
+    meta: {product: field-incidents, reads: [mart_readiness.period_readiness, world_gold.dim_person, world_gold.fct_participation]}
     cubes:
       - join_path: world_participation
         includes: [incident_month, side, role, status, participations, people_involved]
+      - join_path: world_participation.world_people
+        includes: [common_name, person_role]
       - join_path: world_participation.field_incidents_readiness
         includes: [period_status, waiting_on]
 
@@ -348,13 +379,16 @@ views:
   - name: court_outcomes
     description: >
       Court outcomes: charges by the month the court decided them, by offense and outcome, with convictions and
-      the distinct people charged (never summed). period_status says whether a month's decisions are final yet.
-    meta: {product: court-outcomes, reads: [gold.dim_offense, mart_readiness.period_readiness, world_gold.fct_charge]}
+      the distinct people charged (never summed), and who was charged by common name and person_role.
+      period_status says whether a month's decisions are final yet.
+    meta: {product: court-outcomes, reads: [gold.dim_offense, mart_readiness.period_readiness, world_gold.dim_person, world_gold.fct_charge]}
     cubes:
       - join_path: world_charges
         includes: [decided_on, filed_on, offense_code, outcome, is_conviction, charges, convictions, people_charged]
       - join_path: world_charges.offenses
         includes: [offense_description]
+      - join_path: world_charges.world_people
+        includes: [common_name, person_role]
       - join_path: world_charges.court_outcomes_readiness
         includes: [period_status, waiting_on]
 
@@ -362,7 +396,7 @@ views:
     meta: {reads: [world_gold.dim_location, world_gold.fct_incident, world_gold.incident_report_redacted]}
     description: >
       Incident reports, searchable: what heroes, witnesses and the desk wrote about each fight, with every personal
-      detail already replaced ([PERSON NAME], [ALIAS], [SID], [BIRTH DATE], [PHONE]), by kind, filing time, the
+      detail already replaced ([PERSON NAME], [SID], [BIRTH DATE], [PHONE]; heroes' and villains' common names kept), by kind, filing time, the
       fight's kind and month, and city.
     cubes:
       - join_path: world_reports

@@ -62,18 +62,20 @@ def test_reports_come_newest_first_with_the_fights_details():
 
 
 def test_no_personal_detail_comes_back():
-    """For every report returned, none of the details the mention key marks in it appears in its narrative."""
+    """For every report returned, none of the personal details the mention key marks in it (real names, SIDs, birth
+    dates, phones) appears in its narrative; its aliases, public common names since 2026-11-07, do."""
     got = ok(text="identified as", limit=50)
     ids = [r["incident_report_id"] for r in got["reports"]]
     con = lake.lake_ro_connect()
     try:
-        marked = con.execute(f"SELECT incident_report_id, as_written FROM read_parquet('{MENTIONS}') "
+        marked = con.execute(f"SELECT incident_report_id, as_written, kind = 'alias' FROM read_parquet('{MENTIONS}') "
                              "WHERE incident_report_id IN (SELECT unnest(?))", [ids]).fetchall()
     finally:
         con.close()
     assert marked, "the sample has no mentions to check"
     text = {r["incident_report_id"]: r["narrative"] for r in got["reports"]}
-    assert not [(i, w) for i, w in marked if w in text[i]]
+    assert not [(i, w) for i, w, alias in marked if not alias and w in text[i]]
+    assert any(w in text[i] for i, w, alias in marked if alias)
     assert any("[PERSON NAME]" in t for t in text.values())
 
 

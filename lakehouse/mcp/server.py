@@ -499,7 +499,8 @@ def query_metric(metric: str, group_by: list[str] | None = None, filters: list[M
                  time_dimension: str | None = None, date_from: str | None = None, date_to: str | None = None,
                  granularity: str | None = None, limit: int = 100) -> MetricResult:
     """A governed metric from Cube by name (for example record_count, total_restitution, people_in_custody),
-    optionally grouped by dimensions (for example custody_level, unit_name, offense_against), filtered (for
+    optionally grouped by dimensions (for example custody_level, unit_name, offense_against, or common_name: a hero's
+    or villain's public name, SUPERMAN, on fight_participants and court_outcomes), filtered (for
     example [{"dimension": "custody_level", "operator": "equals", "values": ["G5"]}]; notEquals and notContains
     keep rows where the dimension is empty, as Cube does), and over a time range:
     date_from and date_to (YYYY-MM-DD, inclusive) on a time_dimension (for example sentence_date; a view with one
@@ -1424,9 +1425,10 @@ def search_incident_reports(text: str | None = None, kind: str | None = None, ci
                             date_from: str | None = None, date_to: str | None = None,
                             limit: int = 10) -> ReportSearch:
     """Search what heroes, witnesses and the desk wrote about the expanded world's fights (200,000 incident reports),
-    with every personal detail already replaced: names, aliases, SIDs, birth dates and phone numbers read [PERSON NAME],
-    [ALIAS], [SID], [BIRTH DATE] and [PHONE], so a person can't be found by name. text: words or a phrase the report
-    contains, in any case (heist, bridge collapse, "taken into custody"). kind: field report (a hero who was there),
+    with every personal detail already replaced: real names, SIDs, birth dates and phone numbers read [PERSON NAME],
+    [SID], [BIRTH DATE] and [PHONE], so a person can't be found by real name. Heroes' and villains' common names
+    (aliases) are public and kept, so text can be one (Wolverine). text: words or a phrase the report contains, in any
+    case (heist, bridge collapse, "taken into custody"). kind: field report (a hero who was there),
     witness statement (a civilian) or desk report (the call as the desk took it). city: the fight's city. date_from,
     date_to: the filing dates, YYYY-MM-DD, inclusive. Give at least one. Returns how many reports match and the newest
     limit of them (10; at most 50), each with its fight's kind, month and city. Count with query_metric (metric reports,

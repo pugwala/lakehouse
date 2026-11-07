@@ -286,6 +286,17 @@ terms:
     relations:
       - {type: partOf, term: Person}
 
+  - name: Common Name
+    definition: >
+      The name a hero or villain is known by in the expanded world (SUPERMAN, WONDER WOMAN, WOLVERINE), their alias
+      as silver cleansed it. It is public, like a stage name, so gold, Cube, dashboards and the AI agent show it;
+      their real name, birth date and SID are not. Several people can share one (copycats, five Green Lanterns),
+      so people are still counted by person key, never by common name. Civilians have none.
+    synonyms: [alias, hero name, villain name, codename]
+    columns: [world_gold.dim_person.common_name]
+    relations:
+      - {type: partOf, term: Person}
+
 rules:
   - name: People are counted by SID
     statement: >
@@ -296,6 +307,17 @@ rules:
       - cube:custody_population.people_in_custody
       - dbt:dim_person_counts_every_record
       - test:test_custody_cube.py::test_people_by_unit_are_distinct_not_summed
+
+  - name: A common name is public, a real name is not
+    statement: >
+      A hero's or villain's common name (their alias) may be shown anywhere, in gold, Cube, dashboards, the AI
+      agent and the redacted incident reports; their real name, birth date and SID never leave silver and the
+      restricted paths. A shared common name is not one person: people are counted by person key.
+    about: [Common Name, Person]
+    enforced_by:
+      - test:test_common_names_live.py::test_sql_groups_fights_by_common_name
+      - test:test_common_names_live.py::test_the_agent_reads_reports_with_aliases_kept
+      - test:test_report_redaction.py::test_one_label_per_personal_mention
 
   - name: A person's identifier is a pseudonymous key
     statement: >

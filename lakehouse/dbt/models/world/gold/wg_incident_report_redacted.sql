@@ -1,8 +1,9 @@
 {{ config(alias='incident_report_redacted', materialized='incremental', incremental_strategy='delete+insert', unique_key='incident_report_id', on_schema_change='fail',
           tags=['world_monthly']) }}
 -- The incident reports with every personal detail replaced, for search (the MCP server's search_incident_reports,
--- through Cube). Each span the mention key marks (mention_key/incident_report, var world_root) becomes its kind in
--- capitals: [PERSON NAME], [ALIAS], [SID], [BIRTH DATE] or [PHONE]; every other character is kept. Places count
+-- through Cube). Each personal span the mention key marks (mention_key/incident_report, var world_root) becomes its
+-- kind in capitals: [PERSON NAME], [SID], [BIRTH DATE] or [PHONE]; every other character is kept. Aliases stay as
+-- written: a hero's or villain's common name is public, like a stage name (world_gold.dim_person.common_name). Places count
 -- characters from 0, end excluded, and hold in silver because silver keeps the narrative as written. No author column:
 -- the author is a person. The lab redacts by the key, the world's own record of where each detail is; a real
 -- platform would use a detector, which is what the text sessions teach.
@@ -15,7 +16,7 @@ mentions AS (
     SELECT k.incident_report_id, k.start_pos, k.end_pos, k.kind,
            coalesce(lag(k.end_pos) OVER (PARTITION BY k.incident_report_id ORDER BY k.start_pos), 0) AS previous_end
     FROM read_parquet('{{ var("world_root") }}/mention_key/incident_report/*.parquet') k
-    WHERE k.incident_report_id IN (SELECT incident_report_id FROM reports)
+    WHERE k.incident_report_id IN (SELECT incident_report_id FROM reports) AND k.kind <> 'alias'
 ),
 pieces AS (
     -- The text before each mention, then the mention's label ...
