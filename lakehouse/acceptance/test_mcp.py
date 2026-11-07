@@ -49,6 +49,26 @@ def test_refuses_requests_without_the_right_token(token):
     assert rpc("tools/list", token=token).status_code == 401
 
 
+def test_a_browser_gets_a_page_that_explains_the_401():
+    """Opened in a browser, /mcp is still refused (401), but as a short page saying the server is up and is for
+    Claude Code, not a raw JSON error that looks like something broke (Ian, 2026-11-07)."""
+    r = requests.get(MCP, headers={"Accept": "text/html,application/xhtml+xml,*/*;q=0.8"}, timeout=30)
+    assert r.status_code == 401
+    assert r.headers["content-type"].startswith("text/html")
+    assert r.headers["www-authenticate"] == "Bearer"
+    for words in ["is running", "Claude Code", "claude mcp add", "MCP_TOKEN"]:
+        assert words in r.text, words
+    assert TOKEN not in r.text
+
+
+def test_an_mcp_client_still_gets_the_json_401():
+    """A client that asks for JSON (every MCP client does) gets the same refusal as before."""
+    r = rpc("tools/list", token="")
+    assert r.headers["content-type"] == "application/json"
+    assert r.headers["www-authenticate"] == "Bearer"
+    assert r.json() == {"error": "unauthorized"}
+
+
 def test_offers_exactly_its_twelve_tools():
     """The server lists list_metrics, query_metric, define_term, business_rules, data_product_info, data_quality
     (those two are tested in test_mcp_products.py), find_by_tags (test_mcp_tags.py), describe_table and lineage

@@ -1468,21 +1468,46 @@ async def healthz(_request):
     return PlainTextResponse("ok")
 
 
-class BearerAuth:
-    """ASGI middleware: every HTTP request except /healthz must carry the right bearer token, or it gets 401."""
+BROWSER_PAGE = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lakehouse AI agent</title>
+<style>body{{font:16px/1.5 system-ui,sans-serif;max-width:46rem;margin:3rem auto;padding:0 1rem;color:#222;background:#fff}}
+pre{{background:#f3f3f3;padding:1rem;overflow-x:auto;white-space:pre-wrap}}
+@media (prefers-color-scheme: dark){{body{{color:#ddd;background:#181818}}pre{{background:#2a2a2a}}}}</style></head>
+<body><h1>The lakehouse AI agent is running</h1>
+<p>This address is for Claude Code, not a browser. A browser can't send the agent's token, so it is refused here.
+That refusal is expected: nothing is broken.</p>
+<p>To use the agent, add it to Claude Code once, on a machine on the tailnet. The token (<code>MCP_TOKEN</code>) is
+read over SSH, so it never shows on screen:</p>
+<pre>claude mcp add --transport http --scope user lakehouse https://{host}/mcp \\
+  --header "Authorization: Bearer $(ssh lakehouse 'grep ^MCP_TOKEN= ~/lakehouse/lakehouse/.env | cut -d= -f2-')"</pre>
+<p>Then run <code>claude mcp list</code>: it shows <code>lakehouse</code> as connected. Ask it questions in Claude
+Code, for example "What can I measure?"</p></body></html>
+"""
 
-    def __init__(self, app, token):
-        """Wrap app; token is MCP_TOKEN."""
+
+class BearerAuth:
+    """ASGI middleware: every HTTP request except /healthz must carry the right bearer token, or it gets 401.
+
+    The 401 is JSON for MCP clients. A browser (it asks for text/html) gets the same 401 as a short page saying the
+    server is up and how to connect from Claude Code, since it can never send the token itself."""
+
+    def __init__(self, app, token, host="localhost"):
+        """Wrap app; token is MCP_TOKEN, host the name the browser page tells Claude Code to connect to."""
         self.app, self.expected = app, f"Bearer {token}".encode()
+        self.page = BROWSER_PAGE.format(host=html.escape(host)).encode()
 
     async def __call__(self, scope, receive, send):
         """Check the Authorization header in constant time, then hand over to the MCP app."""
         if scope["type"] == "http" and scope["path"] != "/healthz":
-            sent = dict(scope.get("headers", [])).get(b"authorization", b"")
-            if not hmac.compare_digest(sent, self.expected):
+            headers = dict(scope.get("headers", []))
+            if not hmac.compare_digest(headers.get(b"authorization", b""), self.expected):
+                browser = b"text/html" in headers.get(b"accept", b"")
+                kind, body = (b"text/html; charset=utf-8", self.page) if browser else \
+                             (b"application/json", b'{"error": "unauthorized"}')
                 await send({"type": "http.response.start", "status": 401,
-                            "headers": [(b"content-type", b"application/json"), (b"www-authenticate", b"Bearer")]})
-                await send({"type": "http.response.body", "body": b'{"error": "unauthorized"}'})
+                            "headers": [(b"content-type", kind), (b"www-authenticate", b"Bearer")]})
+                await send({"type": "http.response.body", "body": body})
                 return
         await self.app(scope, receive, send)
 
@@ -1494,7 +1519,7 @@ def app():
                                          allowed_origins=[f"https://{ts}"])
     inner = server.streamable_http_app(streamable_http_path="/mcp", json_response=True, stateless_http=True,
                                        transport_security=security, host="0.0.0.0")
-    return BearerAuth(inner, os.environ["MCP_TOKEN"])
+    return BearerAuth(inner, os.environ["MCP_TOKEN"], host=ts)
 
 
 if __name__ == "__main__":

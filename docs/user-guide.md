@@ -2,7 +2,7 @@
 
 # Home Lakehouse User Guide
 
-Updated Nov 5, 2026 · @wrolfgar
+Updated Nov 7, 2026 · @wrolfgar
 
 ## Who this is for and how to get in
 
@@ -31,7 +31,7 @@ Some of it you do in a web page. The rest you do by **writing a small file** in 
 | Superset | `/superset/` | `admin` / `SUPERSET_ADMIN_PASSWORD` |
 | OpenMetadata | `/openmetadata/` | `admin@open-metadata.org` / `OM_ADMIN_PASSWORD` |
 | Fuseki | `/fuseki/` | reading is open; writing is `writer` / `FUSEKI_WRITER_PASSWORD` |
-| MCP agent | `/mcp` | the bearer token `MCP_TOKEN` |
+| MCP agent | `/mcp` | not a browser page: Claude Code connects with the bearer token `MCP_TOKEN` (see Ask the AI agent below) |
 | Grafana | `/grafana/` | `admin` / `GRAFANA_ADMIN_PASSWORD` |
 | Prometheus, Alertmanager | `/prometheus/`, `/alertmanager/` | the Dagster login |
 
@@ -118,6 +118,8 @@ The AI agent answers questions about the lakehouse in plain words, through twelv
 claude mcp add --transport http --scope user lakehouse <tailnet-host> \
   --header "Authorization: Bearer $(ssh lakehouse 'grep ^MCP_TOKEN= ~/lakehouse/lakehouse/.env | cut -d= -f2-')"
 ```
+
+Opening `/mcp` in a browser shows a page that says *The lakehouse AI agent is running*. That's expected: a browser can't send the token, so the agent refuses it and shows this connect command instead.
 
 Then just ask, for example: *"How many people are in custody by custody level, and is October final?"* The agent picks the tools.
 
