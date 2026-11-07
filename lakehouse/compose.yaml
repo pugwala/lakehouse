@@ -18,7 +18,7 @@ x-lake-env: &lake-env
   LAKEHOUSE_COURSE1: ${LAKEHOUSE_COURSE1:-on}   # course 1's add-on (lakehouse/course1_addon.py): on or off
 
 x-om-env: &om-env   # OpenMetadata server and its migration step share these settings
-  BASE_PATH: /openmetadata             # served at https://<LAKE_TS_HOST>/openmetadata/
+  BASE_PATH: /openmetadata/            # served at https://<LAKE_TS_HOST>/openmetadata/; 2.0.5's page needs the slash
   OPENMETADATA_HEAP_OPTS: -Xmx1G -Xms1G
   DB_DRIVER_CLASS: org.postgresql.Driver
   DB_SCHEME: postgresql
