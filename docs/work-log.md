@@ -2,7 +2,7 @@
 
 # Home Lakehouse Work Log
 
-Updated Nov 4, 2026 · @wrolfgar
+Updated Nov 7, 2026 · @wrolfgar
 
 ## How to use this log
 
@@ -129,6 +129,122 @@ cd ~/lakehouse/lakehouse && docker compose --profile core exec -T jupyter pytest
 - [x] Five new MCP tools: describe\_table, lineage, pipeline\_status, platform\_health, search\_incident\_reports (done 2026-11-04; architecture v3.3)
 - [ ] AI operating system and Lakehouse operating system model (wrolfgar, 2026-11-04). Parked as a reminder (wrolfgar, 2026-11-05): "more philosophical or metaphysical than real and it can wait for a good while. I just don't want to forget about them." Not next work; wrolfgar raises it when ready.
 - [ ] Python mini-course between course 1 and course 2 (wrolfgar, 2026-11-04): the Python behind course 1's cleaning, for students completely new to Python, value first and then the how. Parts 0 (Open the Box, c4a2150), 1 (Strings, a8917cc) and 2 (Lists, Dictionaries and Loops, 0d7a639) built 2026-11-04, parts 3 (pandas, 53289d4), 4 (Patterns, 0ed3a48) and 5 (Your Own Session 2, 37c9e00) on 2026-11-05, in homelake. All six parts built; tagged course1-v1.4 and course 2's pin moved there on 2026-11-05 (lakehouse 0c4b75d).
+- [ ] Site probe also fetches one of each page's scripts, so a blank page alerts (found 2026-11-07 with the OpenMetadata fix)
+- [x] Common names, chunk 2: famous villains (Joker, Magneto, Loki, ...) in the world, famous heroes as heroes and frequent; rebuild the world lake; regenerate the sessions' answer keys
+
+## 2026-11-07 · The analyst path: aliases for everyone, real names restricted
+
+**Result.** Analysts have their own Jupyter at `/analyst/` (`analyst-jupyter`), whose only way into the data is Cube's SQL API (`%load_ext cube_sql`), so heroes and villains come back by common name only. Real first and last names are now `Sensitivity.Restricted` and read only on the engineering path, the lab Jupyter. wrolfgar chose "Aliases for all, names restricted" and asked for all five steps, committed.
+
+**What we found.** DuckLake has no column grants, and the lab Jupyter mounts the lake's files, so a role alone can't hide a column there: the wall has to be what a container can reach. OpenMetadata's PUT merges tags and Sensitivity is mutually exclusive, so `om_sync.py` was refused ("Sensitivity.Personal and Sensitivity.Restricted are mutually exclusive") until it learned to remove the old tag first. The image's empty `/home/jovyan/course` working folder at first looked like a mount to the self-check.
+
+**What we did.**
+
+- `analyst/`: `cube_sql.py` (imports nothing of the lake), `selfcheck.py` (four walls, checked from inside), `start_here.ipynb`.
+- `compose.yaml`: `analyst-jupyter` (lab image; only `CUBE_SQL_PASSWORD` and its own `ANALYST_JUPYTER_TOKEN`; mounts only `analyst/` read-only and a notebooks volume), an internal `analyst` network holding only it, Cube and Caddy. Caddy routes `/analyst/`; bootstrap makes the token, starts it, runs the self-check and checks the site; blackbox probes it (11 sites).
+- dbt meta: `first_name`/`last_name` (and `_std`) restricted in `world_bronze.person`, `world_silver.person`, `silver.hero_offenders`, `bronze.hero_offenders_raw`; aliases stay personal. `om_sync.stale_sensitivity()` patches the old tag away before the PUT. The common-name rule names both doors, with two new enforcers.
+- `sql_magic.py` labelled the restricted engineering path. README, User Guide, How-to (and their snapshots) and the Bookmarks doc updated.
+
+**What verified it.** Tests first: 8 analyst unit tests and 3 live ones went red, then green; 4 tag-swap tests. Unit 266 of 266, bats 73 of 73, `checks.sh` all passed, acceptance 447 of 447 after two old tests were updated to Restricted. The self-check passes inside the container (top villains JOKER, MAGNETO, LOKI); the starter notebook runs end to end there. 7 deliberate breaks caught, after a test was added for the one survivor (Derived tags left alone). The two bats tests came after the code, prompted by the failures, so they had no red run of their own.
+
+**Still open.** Architecture v3.4: the analyst path is a new path, so the drawing, version table and tag need a bump pass.
+
+## 2026-11-07 · incident\_damage names the fight and its kind
+
+**Result.** Cube's `incident_damage` view now offers `incident_id` and `incident_type`, so damage can be traced to one fight and split by kind of fight, in SQL and through the agent's `query_metric`. Committed with the analyst path.
+
+**What we found.** `world_damage` already carried `incident_id` and joined `world_incidents` on it, many to one, so no dbt change was needed. About $362M of 2025's damage has no incident type (fights whose type is missing in the messy data).
+
+**What we did.** Test first: `tests/test_incident_damage.py` (red: 2 failed), plus `test_damage_by_fight_and_kind_match_the_lake` in `acceptance/test_world_products.py`. Then `cube/model/world.yml`: an `incident_id` dimension on `world_damage`; the view includes it, and `incident_type` through `world_damage.world_incidents`. Also updated the description in `products/incident-damage.yml`. Restarted cube and mcp.
+
+**What verified it.** All 254 unit tests pass; 19 of 20 in `test_world_products.py` pass, the new one among them. The one failure, the field-incidents product having no tables attached in OpenMetadata, fails the same way without this change. The agent splits 2025 damage by incident type (street fight is the largest, $9.64B).
+
+## 2026-11-07 · Audit: aliases only in the agent and dashboards, not in notebook SQL
+
+**Result.** MCP, Cube and Superset show only aliases (common names); notebook SQL as `lake_ro` can still read real names. Fix not chosen yet.
+
+**What we found.** Gold has no first or last names, and the redacted incident reports have no leftover real names (whole-word match, leaving out real names that are also aliases). For Jean Grey and Jessica Jones, the alias is the real name; wrolfgar says those are public. `lake_ro` can read `first_name`/`last_name` in `world_silver.person`, `world_bronze.person`, `silver.hero_offenders` and `bronze.hero_offenders_raw`.
+
+**What we did.** Read-only probes as `lake_ro` from the jupyter container. Also measured the MCP token cost: tool definitions about 41,500 characters (\~12k tokens); answers run from \~150 tokens (`query_metric`) to \~4,800 (`list_metrics`).
+
+**Open question for wrolfgar.** Should only analysts be limited to aliases, or everyone? Answered: aliases for everyone, real names restricted to the engineering path (next entry up).
+
+## 2026-11-07 · Common names, chunk 2: a famous cast that tops the charts
+
+**Result.** The world now has 25 famous heroes and 25 famous villains as regulars. At M, SUPERMAN leads the heroes with 6,583 fights, ahead of WONDER WOMAN (4,093) and WOLVERINE (3,708). JOKER leads the villains with 6,457, ahead of MAGNETO (4,533) and LOKI (3,806). JOKER also faces the most charges (2,335, with 1,366 convictions). Pushed as d0478aa.
+
+**Why.** wrolfgar: "do chunk 2", the second half of making queries meaningful for teaching.
+
+**What we found.** Each person's fights stay about the same at every scale, but a fixed cast's grow with the number of fights. A share set at M left the cast ten times weaker at S, where only JOKER topped the villains. Course 1's own SUPERMAN, WONDER WOMAN and WOLVERINE are offenders, so they stay villain copycats.
+
+**What we did.**
+
+- Tests first: `tests/test_universe_famous.py` (7, on a fresh S world) and the famous checks in `acceptance/test_common_names_live.py`, all red at first.
+- `universe/world.py`: `FAMOUS` casts them as the first new heroes and new villains, born 1955-1980, with made-up real names that stay restricted.
+- `universe/fights.py`: the cast is kept out of the uniform pools. A fight's lead hero or lead villain is famous with `FAMOUS_SHARE` (set at M, divided by the scale factor), picked by fame (1/sqrt(rank)) among those holding a power that day. Missions draw from every hero.
+- Rebuilt the M world (42 s, manifest verified, same row counts) and the lake (`dbt build --select tag:world+ --full-refresh`: 82 pass, 8 planted-orphan warnings), then restarted Cube.
+- Docs: the README's famous-cast paragraph; the User Guide's `data_quality` (1,167,508) and search rows; the how-to's mention count (1,892,094) and its redaction text. The snapshots match.
+
+**What verified it.** `lakehouse/tests` 251 passed, the live acceptance tests 253, the four world sessions 13 (graded by the rebuilt answer keys), and `ci/checks.sh` and `bootstrap.sh --check` both passed. Session 1's 448,877 messy people is unchanged.
+
+## 2026-11-07 · Common names, chunk 1: heroes and villains by name in SQL and the agent
+
+**Result.** SQL through Cube and the AI agent now answer by a hero's or villain's common name (SUPERMAN, WOLVERINE) instead of a SID. Real names, birth dates and SIDs stay restricted. Pushed as b23a4c7.
+
+**Why.** wrolfgar: queries must return the heroes' and villains' common names, "or otherwise the queries are meaningless to teaching people how to use the lakehouse".
+
+**What we found.** The world already had every alias, but `tagging/rules.yml` treats alias as personal data, so gold's `dim_person` dropped it and Cube had no person cube. Reports also turned aliases into \[ALIAS\]. The famous names are rare: SUPERMAN 4 people, WONDER WOMAN 9, WOLVERINE 9, all with role villain (they are course 1's offenders). There is no JOKER, MAGNETO or LOKI at all. The top names are made-up ones (TECTOFORCE, SEISMOFLUX).
+
+**What we did.**
+
+- Tests first: `tests/test_common_names.py` (new), `test_world_lake.py`, `test_tagging.py`, `acceptance/test_common_names_live.py` (new), `test_report_redaction.py`, `test_mcp_reports.py`. They went red (12 failed).
+- `world_gold.dim_person.common_name` holds the alias of each person's first entry (civilians have none), in the enforced contract.
+- Cube: a new `world_people` cube on `dim_person`, joined from participation and charges. `fight_participants` and `court_outcomes` now offer `common_name` and `person_role`.
+- Redaction keeps aliases as written: 816,360 labels instead of 1,893,406, and no report says \[ALIAS\].
+- Glossary: the Common Name term and the rule "A common name is public, a real name is not". The tagger leaves `common_name` alone on purpose. The MCP tool descriptions say so.
+- Rebuilt `wg_dim_person+` and `wg_incident_report_redacted` (full refresh), restarted Cube and mcp, and published with `bootstrap.sh` (OpenMetadata 3 updates, Fuseki rulebook).
+- User Guide: a "Heroes and villains by name" section with a SQL example, mirrored in `docs/user-guide.md`.
+
+**What verified it.** `lakehouse/tests` 244 passed (world-lake 8 of 8 on a fresh world), the acceptance tests that touch it 207 passed, `ci/checks.sh` passed, and `bootstrap.sh --check` found everything in step. The Cube masks didn't change (6 restricted columns).
+
+**Still open.** Chunk 2: add the famous villains (Joker, Magneto, Loki and others), make the famous heroes heroes and common enough to top the charts, rebuild the world lake, and regenerate the four sessions' answer keys.
+
+## 2026-11-07 · MCP: a browser gets a page that explains the 401
+
+**Result.** Opening `/mcp` in a browser now shows *The lakehouse AI agent is running* and the Claude Code connect command, not `{"error": "unauthorized"}`. Pushed as 430f252.
+
+**Why.** wrolfgar saw the raw authorization error and took it for a fault: "the page shows an authorization error".
+
+**What we found.** The server was fine: with the token it answers 200, and without it 401 with `WWW-Authenticate: Bearer`. A browser never prompts for a bearer token, so `/mcp` can't be opened like the other sites. The User Guide's "Getting in" table listed it beside them, as if you logged in there.
+
+**What we did.**
+
+- Tests first in `acceptance/test_mcp.py`: a browser gets a 401 HTML page naming Claude Code, and an MCP client still gets the JSON 401. The browser test went red.
+- `BearerAuth` in `mcp/server.py` sends the page when the request asks for `text/html`. Still a 401, same check, no token in the page.
+- Restarted only `mcp` (`docker compose --profile core restart mcp`).
+- User Guide: the `/mcp` row now says it's not a browser page, plus a line under the connect command. The snapshot `docs/user-guide.md` got the same edits.
+
+**What verified it.** The 4 access tests pass, then all six MCP test files (93 passed) and `lakehouse/tests` (238 passed). Through HTTPS a browser request gets `401 text/html` with the page. `tieback_check` was clean.
+
+**Still open.** Caddy answers the OAuth discovery addresses (`/.well-known/oauth-*`) with an empty 200; a 404 would be cleaner for MCP clients.
+
+## 2026-11-07 · Fix: OpenMetadata loaded a blank page
+
+**Result.** OpenMetadata opens again at `/openmetadata/`. Fix pushed to pugwala/lakehouse `main` as e9738ed.
+
+**Why.** wrolfgar: "/openmetadata/ does not open".
+
+**What we found.** The server was healthy and the page answered 200, but every script on it returned 404. OpenMetadata 2.0.5's page template glues `BASE_PATH` straight onto file names (`${basePath}assets/...`), so `BASE_PATH: /openmetadata` sent the browser to `/openmetadataassets/...`. The setting hadn't changed since Oct 26. The Prometheus site probe only checks for 200, so no alert fired.
+
+**What we did.**
+
+- Test first: `lakehouse/tests/test_om_base_path.py`. It went red (2 failed, 1 passed) and printed the broken path.
+- Set `BASE_PATH: /openmetadata/` in `lakehouse/compose.yaml`, so the test went green (3 passed).
+- Recreated only the server: `docker compose up -d --no-deps openmetadata-server` (no `load-lake`), then waited until healthy.
+
+**What verified it.** Every script and stylesheet now returns 200, and so do `/openmetadata/api/v1/system/version` and `/openmetadata/signin`. The services' internal routes still answer. `acceptance/test_openmetadata.py` passed 8 of 8, `tieback_check` was clean, and the push started CI by itself.
+
+**Still open.** Make the site probe also fetch one of the page's scripts, so a blank page alerts next time.
 
 ## 2026-11-05 · A user guide for the whole lakehouse
 

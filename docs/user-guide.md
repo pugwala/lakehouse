@@ -26,7 +26,8 @@ Some of it you do in a web page. The rest you do by **writing a small file** in 
 
 | Site | Path | Log in with |
 | --- | --- | --- |
-| Jupyter | `/jupyter/` | the token `JUPYTER_TOKEN` |
+| Lab Jupyter (engineering) | `/jupyter/` | the token `JUPYTER_TOKEN` |
+| Analyst Jupyter | `/analyst/` | the token `ANALYST_JUPYTER_TOKEN` (never the lab's) |
 | Dagster | `/dagster/` | `DAGSTER_UI_USER` and its password |
 | Superset | `/superset/` | `admin` / `SUPERSET_ADMIN_PASSWORD` |
 | OpenMetadata | `/openmetadata/` | `admin@open-metadata.org` / `OM_ADMIN_PASSWORD` |
@@ -41,9 +42,11 @@ Every password is in `~/lakehouse/lakehouse/.env` on the VM, never in the repo. 
 
 | Path | For | Sees | Restricted columns (race, religion, gang affiliation) |
 | --- | --- | --- | --- |
-| Jupyter, straight to the lake, read-only | Engineering | Every schema, bronze to gold, plus time travel | Shown |
-| Cube (SQL or REST) | Analysts, notebooks, BI tools | Gold and the data products' views | `***` unless your token's groups include `restricted_reader` |
+| Lab Jupyter, straight to the lake, read-only (restricted) | Engineering | Every schema, bronze to gold, plus time travel, and heroes' and villains' real names in bronze and silver | Shown |
+| Cube (SQL or REST) | Analysts (the analyst Jupyter), notebooks, BI tools | Gold and the data products' views | `***` unless your token's groups include `restricted_reader` |
 | Superset and the AI agent | Everyone else | Cube only | As Cube |
+
+**Aliases for everyone, real names restricted.** A hero's or villain's alias is their public common name, and every path shows it. Their real first and last names are tagged `Sensitivity.Restricted` and are read only on the engineering path, for the cleaning lessons. Analysts use the analyst Jupyter: it reaches Cube and nothing else (no lake files, no catalog password, no other service on its network), so real names are out of its reach, not just hidden.
 
 ## Query the complete lakehouse
 
@@ -62,9 +65,27 @@ You can query every table in the lake from a Jupyter notebook in one line, read-
 | `world_gold` | `fct_incident`, `fct_participation`, `fct_power_use`, `fct_damage`, `fct_charge`, `fct_mission`, `dim_person`, `dim_location`, `dim_power`, `dim_team`, `incident_report_redacted` |
 | `ops` | Run records (`load_runs`) and the tagger's `table_tags` and `column_tags` |
 
-### In a notebook, straight to the lake
+### In the analyst notebook
 
-Open Jupyter, start a notebook, and load the SQL magic once. Then any cell that starts with `%%sql` runs against the lake:
+Open `/analyst/` with the analyst token and start from `analyst/start_here.ipynb`; save your own notebooks in `work/`. Load the Cube SQL magic once, then query the views, asking for measures with `MEASURE()`:
+
+```sql
+%load_ext cube_sql
+```
+
+```sql
+%%sql
+SELECT common_name, MEASURE(participations) AS fights
+FROM fight_participants
+WHERE person_role = 'villain' AND common_name IS NOT NULL
+GROUP BY 1 ORDER BY 2 DESC LIMIT 10
+```
+
+The same magic works in the lab Jupyter as `%load_ext lakehouse.analyst.cube_sql`.
+
+### In the lab notebook, straight to the lake (engineering)
+
+On the engineering path (restricted), open the lab Jupyter, start a notebook, and load the SQL magic once. Then any cell that starts with `%%sql` runs against the lake:
 
 ```sql
 %load_ext lakehouse.sql_magic
@@ -132,7 +153,7 @@ WHERE person_role = 'villain' AND common_name IS NOT NULL
 GROUP BY 1 ORDER BY 2 DESC LIMIT 5
 ```
 
-Several people can share one common name: copycats, or five Green Lanterns. So count people with `people_involved` or `people_charged`, never by name. Incident reports keep common names as written, so `search_incident_reports` finds a hero by name, while real names still read [PERSON NAME].
+Several people can share one common name: copycats, or five Green Lanterns. So count people with `people_involved` or `people_charged`, never by name. Incident reports keep common names as written, so `search_incident_reports` finds a hero by name, while real names still read \[PERSON NAME\].
 
 **The tools, each with a real answer from November 4, 2026:**
 
@@ -148,7 +169,7 @@ Several people can share one common name: copycats, or five Green Lanterns. So c
 | `describe_table` | One table: columns, tags, products, contract | `fct_charge` | 12 columns, two personal; delivered by court-outcomes; monthly contract |
 | `lineage` | What a table or metric is built from, and what a change would reach | `people_in_custody` | 2 views reading 4 tables, 12 tables upstream |
 | `pipeline_status` | Whether the jobs ran | job `daily_lake` | Runs at 05:00 Central; last success and any failure |
-| `platform_health` | Whether the platform is healthy | (nothing) | Healthy: 10 sites and 7 targets up, no alerts, disk and backups fine |
+| `platform_health` | Whether the platform is healthy | (nothing) | Healthy: 11 sites and 7 targets up, no alerts, disk and backups fine |
 | `search_incident_reports` | The incident reports, with every personal detail replaced (common names kept) | `bridge`, witness statements | 2,017 reports, heroes and villains by their common names, real names shown as `[PERSON NAME]` and so on |
 
 **Good questions to try:**

@@ -120,6 +120,33 @@ services:
     expose:
       - "8888"
 
+  # The analyst path (tests/test_analyst_path.py): a Jupyter at https://<tailscale name>/analyst/ whose only way
+  # into the data is Cube's SQL API (%load_ext cube_sql, analyst/cube_sql.py), so heroes and villains come back by
+  # common name, never by real name. No lake files, no repo (its .env holds every secret), no catalog password:
+  # only the Cube login and its own token. On the internal analyst network, where only Cube and Caddy are, so
+  # the catalog, the lab Jupyter, Dagster and the rest don't even resolve, and there is no internet.
+  # analyst/selfcheck.py checks those walls from inside; bootstrap.sh runs it. The lab Jupyter above is the
+  # engineering path: the raw lake, real names included, for the cleaning lessons.
+  analyst-jupyter:
+    profiles: [core]
+    image: lnl-jupyter:local   # the lab's image, built by the jupyter service
+    restart: unless-stopped
+    depends_on:
+      cube:
+        condition: service_healthy
+    environment:
+      JUPYTER_TOKEN: ${ANALYST_JUPYTER_TOKEN:?set ANALYST_JUPYTER_TOKEN in .env}   # its own token, not the lab's
+      CUBE_SQL_PASSWORD: ${CUBE_SQL_PASSWORD:?set CUBE_SQL_PASSWORD in .env}   # Cube's SQL API, user lake
+      PYTHONPATH: /home/jovyan/analyst   # %load_ext cube_sql
+    command: ["start-notebook.py", "--ServerApp.base_url=/analyst/"]   # served at https://<tailscale name>/analyst/
+    working_dir: /home/jovyan
+    volumes:
+      - ./analyst:/home/jovyan/analyst:ro   # cube_sql.py, selfcheck.py and the starter notebook, read-only
+      - analyst-notebooks:/home/jovyan/work   # the analysts' own notebooks
+    networks: [analyst]
+    expose:
+      - "8888"
+
   load-lake:
     # One-shot loader until the scheduler arrives in a later phase:
     #   docker compose --profile core run --rm load-lake   (lands the pinned handoff, lakehouse/handoff)
@@ -185,6 +212,7 @@ services:
     volumes:
       - ./cube:/cube/conf:ro
       - ${LAKE_ROOT:-/lake}/data:/lake/data:ro
+    networks: [default, analyst]   # analyst: the analyst Jupyter's only way into the data
     expose:
       - "4000"
       - "15432"
@@ -625,8 +653,10 @@ services:
       - caddy-data:/data
       - caddy-config:/config
       - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock   # Caddy gets the *.ts.net certificate from Tailscale
+    networks: [default, analyst]   # analyst: to reach analyst-jupyter at /analyst/
     depends_on:
       - jupyter
+      - analyst-jupyter
       - dagster-webserver
       - superset
       - mcp
@@ -644,7 +674,13 @@ secrets:
   restic_password:
     environment: RESTIC_PASSWORD
 
+networks:
+  default: {}
+  analyst:
+    internal: true   # no internet and no way to the host: analyst-jupyter reaches Cube and Caddy, nothing else
+
 volumes:
+  analyst-notebooks:
   catalog-pg-data:
   opensearch-data:
   caddy-data:

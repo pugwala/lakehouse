@@ -15,7 +15,7 @@ setup() {
   make_stubs
   export PATH="$T/bin:$PATH" FAKE_LOG=$T/calls.log
   export FAKE_MOUNT_SRC=/dev/fakelake FAKE_LAKE_DEV='' FAKE_MOUNTED_AT='' FAKE_BUILD_EXIT=0 FAKE_HAVE_DATA=yes
-  export FAKE_CURL_DOWN="" FAKE_DASH_EXIT=0 FAKE_MODEL_EXIT=0 FAKE_MASKS_EXIT=0 FAKE_RULES_EXIT=0 FAKE_HANDOFF_EXIT=0
+  export FAKE_CURL_DOWN="" FAKE_DASH_EXIT=0 FAKE_MODEL_EXIT=0 FAKE_MASKS_EXIT=0 FAKE_RULES_EXIT=0 FAKE_HANDOFF_EXIT=0 FAKE_WALLS_EXIT=0
   export FAKE_MASKS_OUT="Cube masks: in step with OpenMetadata (6 restricted columns masked)"
   export FAKE_PG_UP=""   # what `up -d --wait catalog-pg` prints; Compose says "Recreated" when it replaced the container
   export FAKE_COURSE1=" "   # git submodule status's first character for course1/: " " at its pin, "-" not checked out, "+" moved
@@ -28,6 +28,7 @@ DAGSTER_PG_PASSWORD=dagster-secret
 JUPYTER_TOKEN=jupyter-secret
 CUBEJS_API_SECRET=cube-api-secret
 CUBE_SQL_PASSWORD=cube-sql-secret
+ANALYST_JUPYTER_TOKEN=analyst-secret
 SUPERSET_SECRET_KEY=superset-key
 SUPERSET_PG_PASSWORD=superset-pg-secret
 SUPERSET_ADMIN_PASSWORD=superset-admin-secret
@@ -60,7 +61,7 @@ case "$*" in
   "compose version"|info)                    exit 0 ;;
   *" build "*)                               exit "$FAKE_BUILD_EXIT" ;;
   *" up -d --wait catalog-pg"*)              echo "$FAKE_PG_UP" >&2; exit 0 ;;
-  *" ps --format {{.Service}} {{.Status}}"*) for s in catalog-pg jupyter dagster-webserver dagster-daemon cube superset mcp opensearch openmetadata-server fuseki prometheus node-exporter cadvisor postgres-exporter blackbox pushgateway catalog-backup offsite-backup ntfy alertmanager grafana caddy; do
+  *" ps --format {{.Service}} {{.Status}}"*) for s in catalog-pg jupyter dagster-webserver dagster-daemon cube analyst-jupyter superset mcp opensearch openmetadata-server fuseki prometheus node-exporter cadvisor postgres-exporter blackbox pushgateway catalog-backup offsite-backup ntfy alertmanager grafana caddy; do
                                                echo "$s Up 1 minute (healthy)"; done ;;
   *" ps --format {{.Status}} "*)             echo "Up 1 minute (healthy)" ;;
   *"stage_model.py --check"*)                 exit "$FAKE_MODEL_EXIT" ;;
@@ -77,6 +78,7 @@ case "$*" in
   *"handoff.receive check"*)                [ "$FAKE_HANDOFF_EXIT" = 0 ] && echo "v2 matches the lock" || echo "silver.hero_offenders (silver.hero_offenders.parquet): missing"; exit "$FAKE_HANDOFF_EXIT" ;;
   *"lnl.publish --out \"\$(python -m lakehouse.handoff.receive where)\""*) echo "Published v2 to /lake/landing/handoff/course1/v2: 13 tables, 19 of 19 numbers match" ;;
   *"exec -T jupyter python"*)                cat >/dev/null; echo "$FAKE_HAVE_DATA" ;;
+  *"exec -T analyst-jupyter python"*)        [ "$FAKE_WALLS_EXIT" = 0 ] && printf 'ok  no_lake_mounted: no /lake, no repo\nok  cube_answers_with_common_names: top villains: JOKER\n' || printf 'ok  cube_answers_with_common_names: top villains: JOKER\nBAD no_lake_mounted: present: [/lake]\n'; exit "$FAKE_WALLS_EXIT" ;;
   *pytest*)                                  echo "19 passed in 0.10s" ;;
   *"run --rm load-lake"*)                    echo "Loaded run fake: 100,000 silver rows" ;;
 esac
@@ -98,7 +100,7 @@ EOF
   stub curl <<'EOF'
 [ -n "$FAKE_CURL_DOWN" ] && { printf 000; exit 7; }   # like real curl when nothing answers: prints 000 and fails
 case "$*" in
-  *example.invalid/jupyter/*) printf 302 ;; *example.invalid/dagster/*) printf 401 ;; *example.invalid/superset/*) printf 302 ;; *example.invalid/mcp*) printf 401 ;; *example.invalid/openmetadata/*) printf 200 ;; *example.invalid/fuseki/*) printf 200 ;; *example.invalid/prometheus/*) printf 401 ;; *example.invalid/grafana/*) printf 302 ;; *example.invalid/alertmanager/*) printf 401 ;; *example.invalid:8443/v1/health*) printf 200 ;; *) printf 000 ;;
+  *example.invalid/jupyter/*) printf 302 ;; *example.invalid/analyst/*) printf 302 ;; *example.invalid/dagster/*) printf 401 ;; *example.invalid/superset/*) printf 302 ;; *example.invalid/mcp*) printf 401 ;; *example.invalid/openmetadata/*) printf 200 ;; *example.invalid/fuseki/*) printf 200 ;; *example.invalid/prometheus/*) printf 401 ;; *example.invalid/grafana/*) printf 302 ;; *example.invalid/alertmanager/*) printf 401 ;; *example.invalid:8443/v1/health*) printf 200 ;; *) printf 000 ;;
 esac
 EOF
   stub tailscale <<'EOF'
@@ -323,11 +325,11 @@ set_env()       { sed -i "/^$1=/d" "$ENV"; [ $# = 1 ] || echo "$1=$2" >> "$ENV";
   not_called " up "
 }
 
-@test "a healthy install passes, starting the twenty-two services by name and not running the loader" {
+@test "a healthy install passes, starting the twenty-three services by name and not running the loader" {
   run_bootstrap
   [ "$status" -eq 0 ]
   [[ $output == *"All checks passed"* ]]
-  called "up -d catalog-pg jupyter dagster-webserver dagster-daemon cube superset mcp opensearch openmetadata-server fuseki prometheus node-exporter cadvisor postgres-exporter blackbox pushgateway catalog-backup offsite-backup ntfy alertmanager grafana caddy"
+  called "up -d catalog-pg jupyter dagster-webserver dagster-daemon cube analyst-jupyter superset mcp opensearch openmetadata-server fuseki prometheus node-exporter cadvisor postgres-exporter blackbox pushgateway catalog-backup offsite-backup ntfy alertmanager grafana caddy"
   not_called "run --rm load-lake"
 }
 
@@ -719,4 +721,20 @@ set_env()       { sed -i "/^$1=/d" "$ENV"; [ $# = 1 ] || echo "$1=$2" >> "$ENV";
   run bash ./bootstrap.sh -h </dev/null
   [ "$status" -eq 0 ]
   [[ "$output" == *"Sets up or repairs the lakehouse"* ]]
+}
+
+# --- the analyst path (tests/test_analyst_path.py) --------------------------------------------------------------
+
+@test "checks the analyst Jupyter's walls from inside it, and its site" {
+  run_bootstrap
+  [ "$status" -eq 0 ]
+  called "exec -T analyst-jupyter python /home/jovyan/analyst/selfcheck.py"
+  [[ $output == *"analyst path: 2 walls hold"* ]]
+  [[ $output == *"https://lakehouse.example.invalid/analyst/ answers 302"* ]]
+}
+
+@test "fails when a wall of the analyst path is down, naming it" {
+  FAKE_WALLS_EXIT=1 run_bootstrap
+  [ "$status" -eq 1 ]
+  [[ $output == *"analyst path: BAD no_lake_mounted"* ]]
 }

@@ -249,11 +249,13 @@ def sensitivity(s):
     """The Sensitivity classification and its Restricted and Personal tags."""
     s.ensure("classifications", CLASSIFICATION,
              {"name": CLASSIFICATION, "description": "How carefully a column must be handled. Restricted columns are "
-              "masked in Cube; personal columns never leave silver.", "mutuallyExclusive": True},
+              "masked in Cube or never reach it; personal columns never leave silver.", "mutuallyExclusive": True},
              lambda e: (e["name"], text(e.get("description"))))
     for name, about in [("Restricted", "Race, religion and security threat group: masked for everyone except "
-                        "restricted_reader."),
-                       ("Personal", "Names, aliases, birth dates and conduct notes: kept out of gold and Cube.")]:
+                        "restricted_reader. Real first and last names: kept in bronze and silver for the engineering "
+                        "path only; analysts see common names through Cube."),
+                       ("Personal", "Aliases, birth dates and conduct notes: kept out of gold and Cube (a hero's or "
+                        "villain's alias reaches gold only as their public common name).")]:
         s.ensure("tags", f"{CLASSIFICATION}.{name}", {"classification": CLASSIFICATION, "name": name,
                                                       "description": about},
                  lambda e: (e["name"], text(e.get("description"))))
@@ -315,6 +317,22 @@ def glossary(s):
                         f"relation {t['name']} {rel['type']} {rel['term']}")
 
 
+def stale_sensitivity(current, wanted_cols):
+    """JSON Patch removals for the hand-set Sensitivity tags that must change: on each column that wants a
+    Sensitivity tag, any other Sensitivity tag OpenMetadata holds. The classification is mutually exclusive and PUT
+    merges tags, so the old one has to go before the PUT (real names went from Personal to Restricted). A column
+    that wants none keeps whatever a steward set; Derived tags (from glossary terms) are left to OpenMetadata.
+    Removals run from the end, so earlier indexes still point at the right tags."""
+    if not current:
+        return []
+    prefix = f"{CLASSIFICATION}."
+    want = {c["name"]: {t["tagFQN"] for t in c["tags"] if t["tagFQN"].startswith(prefix)} for c in wanted_cols}
+    stale = [(i, j) for i, col in enumerate(current.get("columns") or []) if want.get(col["name"])
+             for j, t in enumerate(col.get("tags") or [])
+             if t["tagFQN"].startswith(prefix) and t.get("labelType") == "Manual" and t["tagFQN"] not in want[col["name"]]]
+    return [{"op": "remove", "path": f"/columns/{i}/tags/{j}"} for i, j in sorted(stale, reverse=True)]
+
+
 def tables(s):
     """The lakehouse service, the lake database, its schemas, and every table with its columns."""
     s.ensure("services/databaseServices", SERVICE,
@@ -340,6 +358,11 @@ def tables(s):
                 "description": description, "columns": cols, "tags": automated(table_tags.get((schema, table), []))}
         wanted = {c["name"]: {x["tagFQN"] for x in c["tags"]} for c in cols}
         wanted_table = {x["tagFQN"] for x in body["tags"]}
+        fqn = f"{SERVICE}.{DATABASE}.{schema}.{table}"
+        current = s.get(f"tables/name/{fqn}", fields="columns,tags")
+        stale = stale_sensitivity(current, cols)
+        if stale:   # a sensitivity changed: drop the old tag first, or the PUT below is refused
+            s.patch(f"tables/{current['id']}", stale, f"tables {fqn}: {len(stale)} sensitivity tag(s) changed")
         # Tags the repo wants are a floor, not a ceiling: a steward's tag added in OpenMetadata (PUT merges tags,
         # so it survives) and the tags a glossary term passes on (labelType Derived) aren't differences.
         s.ensure("tables", f"{SERVICE}.{DATABASE}.{schema}.{table}", body, fields="columns,tags",

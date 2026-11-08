@@ -3,6 +3,8 @@
 # enters the repo.
 - targets: ["https://LAKE_TS_HOST/jupyter/"]
   labels: {site: jupyter}
+- targets: ["https://LAKE_TS_HOST/analyst/"]
+  labels: {site: analyst}
 - targets: ["https://LAKE_TS_HOST/dagster/"]
   labels: {site: dagster}
 - targets: ["https://LAKE_TS_HOST/superset/"]

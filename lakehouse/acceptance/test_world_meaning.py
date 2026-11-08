@@ -75,12 +75,15 @@ def test_every_world_table_is_in_openmetadata(om):
 
 
 def test_personal_and_restricted_columns_are_tagged_where_they_live(om):
-    """Names and birth dates are Personal in world_bronze.person and world_silver.person; a team's STG group is
-    Restricted in silver and gold, as the course's STG columns are."""
+    """Aliases and birth dates are Personal in world_bronze.person and world_silver.person, and real names
+    Restricted (since 2026-11-07: only the engineering path reads them); a team's STG group is Restricted in
+    silver and gold, as the course's STG columns are."""
     for fqn in ("world_bronze.person", "world_silver.person"):
         got = tags(om, fqn)
-        for col in ("last_name", "first_name", "alias", "birth_date"):
+        for col in ("alias", "birth_date"):
             assert "Sensitivity.Personal" in got[col], (fqn, col)
+        for col in ("last_name", "first_name"):
+            assert "Sensitivity.Restricted" in got[col] and "Sensitivity.Personal" not in got[col], (fqn, col)
     for fqn in ("world_silver.team", "world_gold.dim_team"):
         assert "Sensitivity.Restricted" in tags(om, fqn)["stg_group"], fqn
     for fqn in ("world_bronze.incident_report", "world_silver.incident_report"):

@@ -1,6 +1,11 @@
 """IPython extension: jupysql's %sql connected to the lake, read-only, as the lake_ro role.
 
-In any notebook in the lakehouse's Jupyter:
+This is the ENGINEERING path, and it is restricted: it reads bronze and silver, where heroes' and villains' real
+first and last names are kept (tagged Sensitivity.Restricted) for the cleaning lessons. Analysts query through
+Cube instead, by common name: the analyst Jupyter at /analyst/ with `%load_ext cube_sql`
+(lakehouse/analyst/cube_sql.py; `%load_ext lakehouse.analyst.cube_sql` here).
+
+In any notebook in the lakehouse's lab Jupyter:
 
     %load_ext lakehouse.sql_magic
     %sql SELECT question_id, as_loaded, cleansed FROM gold.trust_test ORDER BY question_id

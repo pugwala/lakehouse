@@ -22,11 +22,11 @@ for arg in "$@"; do
   esac
 done
 
-SECRETS=(POSTGRES_PASSWORD LAKE_RW_PASSWORD LAKE_RO_PASSWORD DAGSTER_PG_PASSWORD JUPYTER_TOKEN
+SECRETS=(POSTGRES_PASSWORD LAKE_RW_PASSWORD LAKE_RO_PASSWORD DAGSTER_PG_PASSWORD JUPYTER_TOKEN ANALYST_JUPYTER_TOKEN
          CUBEJS_API_SECRET CUBE_SQL_PASSWORD SUPERSET_SECRET_KEY SUPERSET_PG_PASSWORD SUPERSET_ADMIN_PASSWORD
          MCP_TOKEN OM_DB_PASSWORD OM_ADMIN_PASSWORD OM_FERNET_KEY OM_MCP_PASSWORD FUSEKI_WRITER_PASSWORD GRAFANA_ADMIN_PASSWORD LAKE_MONITOR_PASSWORD LAKE_BACKUP_PASSWORD
          NTFY_ALERTMANAGER_PASSWORD NTFY_IAN_PASSWORD NTFY_CHECKER_PASSWORD RESTIC_PASSWORD)
-SERVICES=(catalog-pg jupyter dagster-webserver dagster-daemon cube superset mcp opensearch openmetadata-server fuseki prometheus node-exporter cadvisor postgres-exporter blackbox pushgateway catalog-backup offsite-backup ntfy alertmanager grafana caddy)   # never a bare `up`: it also runs load-lake
+SERVICES=(catalog-pg jupyter dagster-webserver dagster-daemon cube analyst-jupyter superset mcp opensearch openmetadata-server fuseki prometheus node-exporter cadvisor postgres-exporter blackbox pushgateway catalog-backup offsite-backup ntfy alertmanager grafana caddy)   # never a bare `up`: it also runs load-lake
 ROLE_SCRIPTS=(02-dagster.sh 03-superset.sh 04-openmetadata.sh 05-monitor.sh 06-backup.sh)   # app roles on catalog-pg; postgres/init/ only runs on an empty volume
 CONTAINER_UID=1000 CONTAINER_GID=100                                    # jovyan:users in the image
 BACKUP_UID=999 BACKUP_GID=999   # catalog-backup's postgres user: the dumps hold every app database, so not uid 1000
@@ -364,8 +364,13 @@ step "7/7 Proof"
 res=$(dc exec -T jupyter pytest -q lakehouse/tests 2>&1 | tail -1)
 [[ $res == *passed* && $res != *failed* ]] && ok "parity tests: $res" || bad "parity tests: $res"
 
+# The analyst Jupyter checks its own walls from inside: Cube answers by common name, and no lake, repo, catalog
+# or other secret is in reach (analyst/selfcheck.py prints one line per check).
+walls=$(dc exec -T analyst-jupyter python /home/jovyan/analyst/selfcheck.py 2>&1) \
+  && ok "analyst path: $(echo "$walls" | grep -c '^ok ') walls hold" || bad "analyst path: $(echo "$walls" | grep '^BAD' | head -1)"
+
 # The Tailscale name has a real certificate, so no -k here: a self-signed or wrong certificate fails the check.
-for pair in "jupyter:302" "dagster:401" "superset:302" "mcp:401" "openmetadata:200" "fuseki:200" "prometheus:401" "grafana:302" "alertmanager:401" "ntfy:200"; do   # 302 = a login redirect, 401 = basic auth or no MCP token
+for pair in "jupyter:302" "analyst:302" "dagster:401" "superset:302" "mcp:401" "openmetadata:200" "fuseki:200" "prometheus:401" "grafana:302" "alertmanager:401" "ntfy:200"; do   # 302 = a login redirect, 401 = basic auth or no MCP token
   site=${pair%%:*} want=${pair##*:} port=443 url="https://$TS_HOST/${pair%%:*}/"
   [ "$site" = ntfy ] && port=8443 url="https://$TS_HOST:8443/v1/health"   # ntfy can't sit under a path: its own port
   got=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 --resolve "$TS_HOST:$port:127.0.0.1" "$url" || true); got=${got:-000}   # curl prints 000 itself when nothing answers
@@ -374,7 +379,7 @@ done
 
 echo
 if [ ${#FAILED[@]} = 0 ]; then
-  printf '\033[32mAll checks passed.\033[0m Open https://%s/jupyter/, https://%s/dagster/, https://%s/superset/, https://%s/openmetadata/, https://%s/fuseki/ and https://%s/grafana/ (from any device on your tailnet).\n' "$TS_HOST" "$TS_HOST" "$TS_HOST" "$TS_HOST" "$TS_HOST" "$TS_HOST"
+  printf '\033[32mAll checks passed.\033[0m Open https://%s/jupyter/, https://%s/analyst/, https://%s/dagster/, https://%s/superset/, https://%s/openmetadata/, https://%s/fuseki/ and https://%s/grafana/ (from any device on your tailnet).\n' "$TS_HOST" "$TS_HOST" "$TS_HOST" "$TS_HOST" "$TS_HOST" "$TS_HOST" "$TS_HOST"
 else
   printf '\033[31m%d check(s) failed:\033[0m\n' ${#FAILED[@]}; printf '  - %s\n' "${FAILED[@]}"; exit 1
 fi

@@ -12,7 +12,8 @@ The home lakehouse is one Debian VM: about 16.7 million rows of mock data in Duc
 
 | Site | Path | Login | What it's for |
 | --- | --- | --- | --- |
-| Jupyter | `/jupyter/` | token `JUPYTER_TOKEN` | Notebooks, `%sql`, the world sessions |
+| Lab Jupyter | `/jupyter/` | token `JUPYTER_TOKEN` | Notebooks, `%sql`, the world sessions: the engineering path, real names included (restricted) |
+| Analyst Jupyter | `/analyst/` | token `ANALYST_JUPYTER_TOKEN` | `%load_ext cube_sql`: Cube's SQL only, common names, no real names. Its walls: `docker compose --profile core exec -T analyst-jupyter python /home/jovyan/analyst/selfcheck.py` |
 | Dagster | `/dagster/` | basic auth `DAGSTER_UI_USER` (set by `scripts/set-dagster-ui-password.sh`) | Jobs, schedules, runs, asset lineage |
 | Superset | `/superset/` | `admin` / `SUPERSET_ADMIN_PASSWORD` | Dashboards and SQL Lab over Cube |
 | OpenMetadata | `/openmetadata/` | `admin@open-metadata.org` / `OM_ADMIN_PASSWORD` | Glossary, tags, lineage, products, contracts |
@@ -121,7 +122,7 @@ Then ask in plain words: "how many people are in custody by custody level, and i
 | `lineage` | `people_in_custody` | Offered by 2 views reading 4 tables, 12 tables upstream (`gold.fct_offender_record`, the readiness inputs, the reference crosswalks); source: course 1's cleansing |
 | `lineage` | `world_silver.charge` | 3 tables downstream; a change reaches the `court_outcomes` view and the court-outcomes product |
 | `pipeline_status` | job `daily_lake` | Runs at 05:00 Central; last success 17:10 CST; the 16:58 run failed (a test guard, fixed) |
-| `platform_health` | (no arguments) | healthy: 10 sites and 7 targets up, no alerts, Watchdog beating; `/lake` 4.8% used, memory 71% free, certificate 80 days, backups 17 hours old |
+| `platform_health` | (no arguments) | healthy: 11 sites and 7 targets up, no alerts, Watchdog beating; `/lake` 4.8% used, memory 71% free, certificate 80 days, backups 17 hours old |
 | `search_incident_reports` | `bridge`, witness statements | 2,017 reports; the newest: "I saw the whole street fight at National City Bridge 6987. There was this villain, Neuronova..." |
 
 **Good questions to try.**

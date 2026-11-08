@@ -1,6 +1,7 @@
 # One way in: this VM's Tailscale name (bootstrap.sh sets LAKE_TS_HOST from `tailscale status`).
 #
-#   https://<LAKE_TS_HOST>/jupyter/   Jupyter (token login)
+#   https://<LAKE_TS_HOST>/jupyter/   Jupyter (token login): the engineering path, the raw lake
+#   https://<LAKE_TS_HOST>/analyst/   the analyst Jupyter (its own token): Cube's SQL API only, common names
 #   https://<LAKE_TS_HOST>/dagster/   Dagster (basic auth below; Dagster has no login of its own)
 #   https://<LAKE_TS_HOST>/superset/  Superset (its own login; SUPERSET_APP_ROOT=/superset, so the path is kept)
 #   https://<LAKE_TS_HOST>/mcp        MCP server (bearer token MCP_TOKEN, checked by the server itself)
@@ -22,6 +23,9 @@
 	redir / /jupyter/
 	handle /jupyter* {
 		reverse_proxy jupyter:8888
+	}
+	handle /analyst* {
+		reverse_proxy analyst-jupyter:8888
 	}
 	handle /dagster* {
 		basic_auth {

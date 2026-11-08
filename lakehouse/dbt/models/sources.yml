@@ -31,9 +31,9 @@ sources:
           - name: stg_status
             meta: {sensitivity: restricted}
           - name: last_name
-            meta: {sensitivity: personal}
+            meta: {sensitivity: restricted}
           - name: first_name
-            meta: {sensitivity: personal}
+            meta: {sensitivity: restricted}
           - name: alias
             meta: {sensitivity: personal}
           - name: date_of_birth
@@ -41,9 +41,9 @@ sources:
           - name: conduct_notes
             meta: {sensitivity: personal}
           - name: last_name_std
-            meta: {sensitivity: personal}
+            meta: {sensitivity: restricted}
           - name: first_name_std
-            meta: {sensitivity: personal}
+            meta: {sensitivity: restricted}
           - name: alias_std
             meta: {sensitivity: personal}
       - name: hero_offenders_exceptions
@@ -66,9 +66,9 @@ sources:
           - name: stg_affiliation
             meta: {sensitivity: restricted}
           - name: last_name
-            meta: {sensitivity: personal}
+            meta: {sensitivity: restricted}
           - name: first_name
-            meta: {sensitivity: personal}
+            meta: {sensitivity: restricted}
           - name: alias
             meta: {sensitivity: personal}
           - name: date_of_birth

@@ -18,7 +18,8 @@ cleansing the class uses, so every number matches the Facilitator Guide. dbt bui
 | `lake.py` | Helpers: `lake_connect()`, `lake_ro_connect()`, `run()` (lands course 1's pinned handoff; runs none of course 1's code) |
 | `tagging/` | Automatic governance and metadata tags as data lands: `sources.yml` (each ingested source, its governance, system and refresh), `rules.yml` (the tag vocabulary and the column rules), `tags.py` (the tagger; writes `ops.table_tags` and `ops.column_tags`) |
 | `handoff/` | The handoff from course 1 to course 2: `receive.py`, `contract.yml` and `course1.lock.json` (course 2's side: what it accepts, the pinned version, checked before anything is built on it). Course 1's side, `lnl/publish.py` and `lnl/parity.py`, is in `course1/` |
-| `sql_magic.py` | `%load_ext lakehouse.sql_magic`: jupysql's `%sql` on the lake, read-only as `lake_ro` |
+| `sql_magic.py` | `%load_ext lakehouse.sql_magic`: jupysql's `%sql` on the lake, read-only as `lake_ro`. The engineering path: it reads real names, which are restricted |
+| `analyst/` | The analyst path: `cube_sql.py` (`%load_ext cube_sql`, jupysql's `%sql` on Cube's SQL API, common names only), `selfcheck.py` (the analyst Jupyter checks its own walls) and `start_here.ipynb`, all mounted read-only into the analyst Jupyter |
 | `load_lake.py` | Lands course 1's pinned handoff as reference, bronze and silver, one DuckLake snapshot |
 | `tests/test_parity.py` | 19 checks that the lake matches the Facilitator Guide's numbers (course 1's `lnl/parity.py`), plus bronze's row count |
 | `dbt/` | Gold models and tests (dbt-duckdb, attaches DuckLake), and the expanded world's bronze, silver and gold (`models/world`, tag `world`) |
@@ -117,7 +118,7 @@ What it does, in order:
    set, stops on duplicate keys, asks for the Dagster UI login if it's missing, and keeps `.env` at mode 600.
 5. **Image and services.** Builds the image, starts Postgres, creates the `dagster` role (Postgres runs
    `postgres/init/` only on an empty volume), generates OpenMetadata's own JWT signing keys once (under
-   `/lake/openmetadata/keys`, never in the repo), starts the twenty-two long-running services by name, reloads Caddy, makes Prometheus and Alertmanager reread
+   `/lake/openmetadata/keys`, never in the repo), starts the twenty-three long-running services by name, reloads Caddy, makes Prometheus and Alertmanager reread
    their config (SIGHUP), and restarts Dagster if catalog-pg was recreated (its pooled connections would be dead).
 6. **Lake data and meaning.** Publishes course 1's pinned handoff if it isn't there yet (course 1's `lnl/publish.py`, into the folder
    `receive where` names: the same bytes as the lock), runs the loader if silver or `ref.null_tokens` is missing, stages session 7's model,
@@ -142,7 +143,8 @@ sudo mkdir -p /lake && sudo mount /lake && findmnt /lake
 break containers' internet lookups. Turn on HTTPS certificates in the Tailscale admin console. `bootstrap.sh` sets
 `LAKE_TS_HOST` from `tailscale status`, and Caddy then serves, with a real certificate from Tailscale:
 
-- `https://<LAKE_TS_HOST>/jupyter/`: Jupyter, token login
+- `https://<LAKE_TS_HOST>/jupyter/`: the lab Jupyter, token login (the engineering path: the raw lake)
+- `https://<LAKE_TS_HOST>/analyst/`: the analyst Jupyter, its own token (`ANALYST_JUPYTER_TOKEN`): Cube only
 - `https://<LAKE_TS_HOST>/dagster/`: Dagster, behind Caddy basic auth
 - `https://<LAKE_TS_HOST>/superset/`: Superset, its own login
 - `https://<LAKE_TS_HOST>/openmetadata/`: OpenMetadata, its own login
@@ -182,7 +184,30 @@ PyPI). The cutoff is build-only, so the course's setup cells can still install w
 
 ## Querying
 
-From a notebook, the quickest way is SQL. One line connects jupysql to the lake, read-only, as `lake_ro`:
+**Two doors, one rule: aliases for everyone, real names restricted.** A hero's or villain's alias is their public
+common name; their real first and last name is `Sensitivity.Restricted` (dbt's meta, then OpenMetadata).
+
+| Path | Where | Reaches | Real names |
+| --- | --- | --- | --- |
+| Analyst | `/analyst/` with `%load_ext cube_sql`; also Superset and the MCP agent | Cube's views over gold | Never: common names only |
+| Engineering (restricted) | `/jupyter/` with `%load_ext lakehouse.sql_magic` | The raw lake: bronze, silver, gold | Yes, for the cleaning lessons |
+
+The analyst Jupyter (`analyst-jupyter` in `compose.yaml`) uses the lab's image but holds only the Cube login and
+its own token: no lake files, no repo (whose `.env` has every secret), no catalog password. It sits on the internal
+`analyst` network with only Cube and Caddy, so the catalog, the lab Jupyter and Dagster don't resolve and there is no
+internet. `analyst/selfcheck.py` checks those walls from inside it, and `bootstrap.sh` runs it. In Cube's SQL, ask
+for measures with `MEASURE()`:
+
+```sql
+%%sql
+SELECT common_name, MEASURE(participations) FROM fight_participants
+WHERE person_role = 'villain' GROUP BY 1 ORDER BY 2 DESC LIMIT 10
+```
+
+Why a separate container: DuckLake has no column grants, and the lab Jupyter mounts the lake's files, so a role
+alone can't hide a column there. The wall is what the analyst container can reach.
+
+**The engineering path.** From a notebook in the lab Jupyter, the quickest way is SQL. One line connects jupysql to the lake, read-only, as `lake_ro`:
 
 ```
 %load_ext lakehouse.sql_magic

@@ -312,12 +312,17 @@ rules:
     statement: >
       A hero's or villain's common name (their alias) may be shown anywhere, in gold, Cube, dashboards, the AI
       agent and the redacted incident reports; their real name, birth date and SID never leave silver and the
-      restricted paths. A shared common name is not one person: people are counted by person key.
+      restricted paths. Everyone queries by common name on the analyst path (the analyst Jupyter's SQL, Superset
+      and the agent, all through Cube); real names, tagged Sensitivity.Restricted, are read only on the
+      engineering path (the lab Jupyter's raw lake), for the cleaning lessons. A shared common name is not one
+      person: people are counted by person key.
     about: [Common Name, Person]
     enforced_by:
       - test:test_common_names_live.py::test_sql_groups_fights_by_common_name
       - test:test_common_names_live.py::test_the_agent_reads_reports_with_aliases_kept
       - test:test_report_redaction.py::test_one_label_per_personal_mention
+      - test:test_analyst_path_live.py::test_cube_sql_offers_no_real_name
+      - test:test_analyst_path_live.py::test_real_names_are_restricted_in_openmetadata
 
   - name: A person's identifier is a pseudonymous key
     statement: >

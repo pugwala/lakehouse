@@ -128,13 +128,15 @@ def test_sync_is_idempotent():
 
 def test_raw_and_personal_columns_are_tagged_where_they_live(om):
     """Silver and bronze keep the raw race, religion and STG values and the personal fields: dbt's source metadata
-    marks them, and OpenMetadata tags them Restricted or Personal there too."""
+    marks them, and OpenMetadata tags them Restricted or Personal there too. Real names are Restricted since
+    2026-11-07 (tests/test_analyst_path.py): only the engineering path reads them."""
     silver = get(om, "tables/name/lakehouse.lake.silver.hero_offenders", fields="columns,tags")
     tags = {c["name"]: {t["tagFQN"] for t in c.get("tags", [])} for c in silver["columns"]}
     assert "Sensitivity.Restricted" in tags["race"] and "Sensitivity.Restricted" in tags["stg_affiliation"]
     assert "Sensitivity.Personal" in tags["conduct_notes"] and "Sensitivity.Personal" in tags["date_of_birth"]
     bronze = get(om, "tables/name/lakehouse.lake.bronze.hero_offenders_raw", fields="columns,tags")
-    assert "Sensitivity.Personal" in {t["tagFQN"] for c in bronze["columns"] if c["name"] == "last_name" for t in c.get("tags", [])}
+    last = {t["tagFQN"] for c in bronze["columns"] if c["name"] == "last_name" for t in c.get("tags", [])}
+    assert "Sensitivity.Restricted" in last and "Sensitivity.Personal" not in last
 
 
 # --- the daily run ---------------------------------------------------------------------------------------------

@@ -27,10 +27,10 @@ models:
   columns:
   - name: last_name
     meta:
-      sensitivity: personal
+      sensitivity: restricted
   - name: first_name
     meta:
-      sensitivity: personal
+      sensitivity: restricted
   - name: alias
     meta:
       sensitivity: personal
