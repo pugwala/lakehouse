@@ -12,7 +12,7 @@ Some of it you do in a web page. The rest you do by **writing a small file** in 
 
 | You want to | Where | How |
 | --- | --- | --- |
-| Query data | Jupyter, Superset SQL Lab, Cube | In the browser |
+| Query data | The analyst Jupyter, Superset SQL Lab, Cube (the lab Jupyter for engineering) | In the browser |
 | Ask questions in plain words | The AI agent (MCP) | In Claude Code |
 | Find and understand data | OpenMetadata, Fuseki | In the browser |
 | Check processing and quality | Dagster, Grafana, the agent | In the browser |
@@ -40,17 +40,17 @@ Every password is in `~/lakehouse/lakehouse/.env` on the VM, never in the repo. 
 
 **Three ways to the data, and what each one hides.** The lake itself (DuckDB on DuckLake) has no permissions of its own, so the governed path is Cube.
 
-| Path | For | Sees | Restricted columns (race, religion, gang affiliation) |
+| Path | For | Sees | Restricted columns (race, religion, gang affiliation, real names) |
 | --- | --- | --- | --- |
 | Lab Jupyter, straight to the lake, read-only (restricted) | Engineering | Every schema, bronze to gold, plus time travel, and heroes' and villains' real names in bronze and silver | Shown |
-| Cube (SQL or REST) | Analysts (the analyst Jupyter), notebooks, BI tools | Gold and the data products' views | `***` unless your token's groups include `restricted_reader` |
+| Cube (SQL or REST) | Analysts (the analyst Jupyter), notebooks, BI tools | Gold and the data products' views | `***` unless your token's groups include `restricted_reader`; real names aren't served at all |
 | Superset and the AI agent | Everyone else | Cube only | As Cube |
 
 **Aliases for everyone, real names restricted.** A hero's or villain's alias is their public common name, and every path shows it. Their real first and last names are tagged `Sensitivity.Restricted` and are read only on the engineering path, for the cleaning lessons. Analysts use the analyst Jupyter: it reaches Cube and nothing else (no lake files, no catalog password, no other service on its network), so real names are out of its reach, not just hidden.
 
 ## Query the complete lakehouse
 
-You can query every table in the lake from a Jupyter notebook in one line, read-only. Query the governed views through Cube's SQL, from a notebook or Superset's SQL Lab.
+Analysts query the governed views through Cube's SQL, from the analyst Jupyter or Superset's SQL Lab. On the engineering path, the lab Jupyter queries every table in the lake in one line, read-only.
 
 **What's in the lake.** Name every table by its schema.
 
@@ -198,7 +198,7 @@ Start in OpenMetadata to find a table and learn what it means; use Fuseki when y
 To find data:
 
 1. **Search** with the bar at the top: a table name, a column, or a business word like *custody*.
-2. **Open the table.** The Schema tab shows each column with its type, description and tags. A `PII` or `PIIType.*` tag means personal data; `Sensitivity.Restricted` means Cube masks it.
+2. **Open the table.** The Schema tab shows each column with its type, description and tags. A `PII` or `PIIType.*` tag means personal data; `Sensitivity.Restricted` means Cube masks it, or never serves it (real names, read only on the engineering path).
 3. **Open Lineage** to see what the table is built from and what's built from it. Edges marked `DbtLineage` are rebuilt each run; an edge you draw by hand is marked `Manual` and never touched.
 4. **Open the Glossary** (Govern → Glossary) for a term's definition, its synonyms, and the columns and metrics it maps to.
 5. **Open Domains** for the five data products, their contracts, and who owns them.
@@ -567,7 +567,8 @@ Build dashboards in Superset, on Cube's governed views; ask questions in plain w
 | --- | --- | --- |
 | Superset (`/superset/`) | Dashboards and charts for the business; SQL Lab | Cube only |
 | The AI agent (MCP) | Plain-word questions, definitions, lineage, health | Cube and the catalog |
-| Jupyter (`/jupyter/`) | Analysis in Python and SQL | The lake (read-only) or Cube |
+| Lab Jupyter (`/jupyter/`) | Engineering: analysis and the cleaning lessons, real names included (restricted) | The lake (read-only) or Cube |
+| Analyst Jupyter (`/analyst/`) | Analysis in Python and SQL, by common name (`%load_ext cube_sql`) | Cube only |
 | Grafana (`/grafana/`) | The platform, pipeline and data-quality trends | Prometheus |
 
 **The three dashboards today:** **Trust Test** (`/superset/dashboard/trust-test/`), course 1's eight questions before and after cleansing; **Custody** (`/superset/dashboard/custody/`), people in custody by month-end, level and offense; and **Fights, Damage and Courts** (`/superset/dashboard/world/`), the expanded world's three products. Each starts with a status table saying which months are final.

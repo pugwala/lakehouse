@@ -132,6 +132,10 @@ cd ~/lakehouse/lakehouse && docker compose --profile core exec -T jupyter pytest
 - [ ] Site probe also fetches one of each page's scripts, so a blank page alerts (found 2026-11-07 with the OpenMetadata fix)
 - [x] Common names, chunk 2: famous villains (Joker, Magneto, Loki, ...) in the world, famous heroes as heroes and frequent; rebuild the world lake; regenerate the sessions' answer keys
 
+## 2026-11-07 · User Guide: the last pre-analyst-path wording
+
+**Result.** Asked whether the User Guide was up to date, I found five places still written for one Jupyter, now fixed: the "Query data" row, the restricted-columns header and Cube cell (real names aren't served at all), the opening line of "Query the complete lakehouse", OpenMetadata step 2 (`Sensitivity.Restricted` means masked, or never served), and the tools table (Lab Jupyter and a new Analyst Jupyter row). Snapshot `docs/user-guide.md` refreshed with this log's.
+
 ## 2026-11-07 · Architecture v3.4: the analyst path
 
 **Result.** The architecture is v3.4, as of 2026-11-07 (git tag `arch-v3.4`): the analyst path is a new path, so the minor number moved. The drawing, the Plan, the How-to, the Handoff, the README lines and `docs/architecture.png` all say v3.4.
