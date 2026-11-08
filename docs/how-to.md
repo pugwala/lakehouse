@@ -6,7 +6,7 @@ Updated Nov 7, 2026 · @wrolfgar
 
 ## Start here
 
-The home lakehouse is one Debian VM: about 16.7 million rows of mock data in DuckLake, governed and served by eleven sites on one Tailscale name. Course 1 hands over its cleansed records; course 2, this lakehouse, lands them, builds the expanded world around them, and serves both through Cube. The architecture drawing (v3.3) is in the [Plan](https://claude.ai/artifact/Js8ovfd7HE7BJ5Sj6TS3Sj).
+The home lakehouse is one Debian VM: about 16.7 million rows of mock data in DuckLake, governed and served by eleven sites on one Tailscale name. Course 1 hands over its cleansed records; course 2, this lakehouse, lands them, builds the expanded world around them, and serves both through Cube. The architecture drawing (v3.4) is in the [Plan](https://claude.ai/artifact/Js8ovfd7HE7BJ5Sj6TS3Sj).
 
 **Reaching it.** Every site is at `<tailnet-host>`, from any device on the tailnet, with a real certificate. Nothing is open to the internet.
 
@@ -328,8 +328,8 @@ bash ~/lakehouse/lakehouse/scripts/bootstrap.sh --check  # is everything in step
 
 **Docs in the repo.** The Claude Docs (this one, the Plan, the Handoff, the Work Log, the ontology guide and the course boundary) are the live copies. Scrubbed Markdown snapshots of them sit in `pugwala/lakehouse`'s `docs/`, refreshed whenever the docs change, with names and network addresses replaced.
 
-**Architecture versions.** The architecture is versioned major.minor and dated: **v3.3, as of November 4, 2026**. The version is in the drawing's corner, `docs/architecture.png` and git tag `arch-v3.3`.
+**Architecture versions.** The architecture is versioned major.minor and dated: **v3.4, as of November 7, 2026**. The version is in the drawing's corner, `docs/architecture.png` and git tag `arch-v3.4`.
 
-- **A new component, layer or path** makes v3.4.
+- **A new component, layer or path** makes v3.5.
 - **A change in what the lakehouse is** makes v4.0.
 - **Fixes, tests and documents** don't change it.

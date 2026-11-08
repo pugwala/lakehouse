@@ -132,6 +132,14 @@ cd ~/lakehouse/lakehouse && docker compose --profile core exec -T jupyter pytest
 - [ ] Site probe also fetches one of each page's scripts, so a blank page alerts (found 2026-11-07 with the OpenMetadata fix)
 - [x] Common names, chunk 2: famous villains (Joker, Magneto, Loki, ...) in the world, famous heroes as heroes and frequent; rebuild the world lake; regenerate the sessions' answer keys
 
+## 2026-11-07 · Architecture v3.4: the analyst path
+
+**Result.** The architecture is v3.4, as of 2026-11-07 (git tag `arch-v3.4`): the analyst path is a new path, so the minor number moved. The drawing, the Plan, the How-to, the Handoff, the README lines and `docs/architecture.png` all say v3.4.
+
+**What we did.** In the Plan's drawing, the right-hand column now shows the Lab Jupyter (engineering, the raw lake, real names too) and, fed by Cube beside Superset, the Analyst Jupyter (Cube SQL, aliases); the corner reads v3.4, and the handoff box's stale `course1-v1.3` became `course1-v1.4`. Staged as a draft, looked at, then published. The Plan's caption, the sentence under the drawing, the version table (a v3.4 row) and "Built beyond the plan" (the analyst path) were updated; the next addition makes v3.5. The snapshots and `scrub.py`'s picture caption were refreshed, then the commit was tagged.
+
+**What verified it.** The draft's screenshot showed every label inside its box and every connector landing on an edge; the scrubbed snapshots passed the leftover checks, the branding guard and the tieback check.
+
 ## 2026-11-07 · The analyst path: aliases for everyone, real names restricted
 
 **Result.** Analysts have their own Jupyter at `/analyst/` (`analyst-jupyter`), whose only way into the data is Cube's SQL API (`%load_ext cube_sql`), so heroes and villains come back by common name only. Real first and last names are now `Sensitivity.Restricted` and read only on the engineering path, the lab Jupyter. wrolfgar chose "Aliases for all, names restricted" and asked for all five steps, committed.
@@ -147,7 +155,7 @@ cd ~/lakehouse/lakehouse && docker compose --profile core exec -T jupyter pytest
 
 **What verified it.** Tests first: 8 analyst unit tests and 3 live ones went red, then green; 4 tag-swap tests. Unit 266 of 266, bats 73 of 73, `checks.sh` all passed, acceptance 447 of 447 after two old tests were updated to Restricted. The self-check passes inside the container (top villains JOKER, MAGNETO, LOKI); the starter notebook runs end to end there. 7 deliberate breaks caught, after a test was added for the one survivor (Derived tags left alone). The two bats tests came after the code, prompted by the failures, so they had no red run of their own.
 
-**Still open.** Architecture v3.4: the analyst path is a new path, so the drawing, version table and tag need a bump pass.
+**Still open.** Nothing: the v3.4 bump was done the same evening (next entry up).
 
 ## 2026-11-07 · incident\_damage names the fight and its kind
 

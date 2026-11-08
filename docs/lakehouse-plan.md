@@ -2,7 +2,7 @@
 
 # DuckDB Home Lakehouse Plan
 
-Updated Nov 5, 2026 · @wrolfgar
+Updated Nov 7, 2026 · @wrolfgar
 
 ## Summary
 
@@ -43,6 +43,7 @@ Built beyond the plan:
 - **pugwala/lakehouse (since 2026-11-03):** course 2's own repo, with the lakehouse's history. Course 1 is the submodule `course1/`: **pugwala/homelake**, the lab's own copy of the course without the course name, at the tag `course1-v1.4`. Since November 3 the Databricks enterprise track is split at the boundary too: course 1 keeps notebooks 00 to 02 and hands the next deliveries over; course 2 has its own `enterprise/` folder and helpers. Course 1's side of the VM handoff (publish, parity) lives in course 1 too, since course1-v1.2 (course1-v1.3 since November 4: the enterprise notebooks say how to run them when opened outside Databricks; course1-v1.4 since November 5: the Python mini-course). The live stack runs from this repo since November 3; the course repo's `duckdb-lakehouse` branch is frozen.
 - **The course boundary:** course 1 is sessions 1 to 7; course 2 is the lakehouse ([boundary doc](https://claude.ai/artifact/R1688c4LU7fYfwiQGJQDij)). Course 2 starts from course 1's pinned handoff (`lakehouse/handoff/`) and runs none of its code. Course 1's Trust Test, parity gate and notebook smoke are an add-on behind one switch, `LAKEHOUSE_COURSE1`, and CI proves the platform builds with it off.
 - **Automatic tags:** `lakehouse/tagging/` registers each source (`sources.yml`) and holds the column rules (`rules.yml`). Every daily run tags each table and column, follows dbt lineage into gold, and publishes the tags to OpenMetadata. Live: 57 CJIS tables, 29 with personal data, 89 personal columns (since November 3 the incident reports' narrative too, found as free text with no rule change; since November 4 the redacted copy too, which keeps the free-text tag though every marked detail is replaced).
+- **The analyst path (since November 7):** aliases for everyone, real names restricted. The analyst Jupyter at `/analyst/` holds only the Cube login and reaches only Cube and Caddy, so heroes and villains come back by common name; real first and last names are tagged `Sensitivity.Restricted` and read only in the lab Jupyter, for the cleaning lessons.
 
 How the risks below turned out:
 
@@ -52,15 +53,15 @@ How the risks below turned out:
 
 ## Target architecture
 
-![Home lakehouse architecture v3.3, as of 2026-11-04: course 1's checked handoff lands in DuckLake; course 2 governs it and serves it through Cube](architecture.png)
+![Home lakehouse architecture v3.4, as of 2026-11-07: course 1's checked handoff lands in DuckLake; course 2 governs it and serves it through Cube](architecture.png)
 
-*Architecture v3.3, as of 2026-11-04, drawn 2026-11-04 (`architecture.png`, a picture of the live doc's drawing; git tag `arch-v3.3`).*
+*Architecture v3.4, as of 2026-11-07, drawn 2026-11-07 (`architecture.png`, a picture of the live doc's drawing; git tag `arch-v3.4`).*
 
-Read left to right. Course 1 hands over its cleansed data once, pinned and checked (the 19 Facilitator Guide numbers, a fingerprint); course 2 lands it and runs none of course 1's code. dbt, the world generator and the business units' closes build the other layers. DuckLake stores it all; automatic tags, OpenMetadata, Fuseki and Cube give it meaning, rules and readiness; people reach it through Cube, the MCP agent (twelve tools) and Superset (three dashboards over five data products), only on the tailnet. Only engineering attaches to DuckLake directly, read-only. Monitoring watches every service and rule, with a runbook per alert, and alerts reach your phone. Backups run nightly to a local folder for now (TrueNAS is on hold). The same ideas on an enterprise Databricks workspace are each course's enterprise/ track, not drawn here. This is architecture v3.3, as of November 4, 2026 (drawn November 4).
+Read left to right. Course 1 hands over its cleansed data once, pinned and checked (the 19 Facilitator Guide numbers, a fingerprint); course 2 lands it and runs none of course 1's code. dbt, the world generator and the business units' closes build the other layers. DuckLake stores it all; automatic tags, OpenMetadata, Fuseki and Cube give it meaning, rules and readiness; people reach it through Cube, the MCP agent (twelve tools), Superset (three dashboards over five data products) and the analyst Jupyter (Cube SQL, common names only), only on the tailnet. Only engineering attaches to DuckLake directly, read-only, and only there can real names be read. Monitoring watches every service and rule, with a runbook per alert, and alerts reach your phone. Backups run nightly to a local folder for now (TrueNAS is on hold). The same ideas on an enterprise Databricks workspace are each course's enterprise/ track, not drawn here. This is architecture v3.4, as of November 7, 2026 (drawn November 7).
 
 ### Architecture versions
 
-The architecture is versioned like course 1's tags (`course1-v1.4`): **major.minor, dated**. The major number changes when what the lakehouse *is* changes; the minor number counts the components, layers or paths added within that major version. Fixes, tests and documents don't change it. The version and its date sit in the drawing's corner, in the repo's copy of it (`docs/architecture.png`) and on the git tag `arch-v3.3` in pugwala/lakehouse, so a discussion can name one version and everyone looks at the same thing. The next addition makes v3.4; a change in what the lakehouse is makes v4.0.
+The architecture is versioned like course 1's tags (`course1-v1.4`): **major.minor, dated**. The major number changes when what the lakehouse *is* changes; the minor number counts the components, layers or paths added within that major version. Fixes, tests and documents don't change it. The version and its date sit in the drawing's corner, in the repo's copy of it (`docs/architecture.png`) and on the git tag `arch-v3.4` in pugwala/lakehouse, so a discussion can name one version and everyone looks at the same thing. The next addition makes v3.5; a change in what the lakehouse is makes v4.0.
 
 | Version | Date | What changed in the architecture |
 | --- | --- | --- |
@@ -83,6 +84,7 @@ The architecture is versioned like course 1's tags (`course1-v1.4`): **major.min
 | v3.1 | 2026-11-02 | Automatic tags on every table and column as data lands, published to OpenMetadata |
 | v3.2 | 2026-11-03 | Course 2 in its own repo, pugwala/lakehouse, with course 1 as a pinned submodule; the live stack runs from it. Drawn November 4 |
 | v3.3 | 2026-11-04 | The MCP agent reaches the catalog, the jobs and the platform: twelve tools (describe\_table, lineage, pipeline\_status, platform\_health, search\_incident\_reports added). OpenMetadata holds dbt's lineage; incident reports are searchable through a redacted gold table and Cube view. Drawn November 4 |
+| v3.4 | 2026-11-07 | The analyst path: an analyst Jupyter whose only way into the data is Cube's SQL (common names only), walled off on its own network; real names Sensitivity.Restricted, read only on the engineering path. Drawn November 7 |
 
 ## Phase 0: Proxmox build (1 session)
 
