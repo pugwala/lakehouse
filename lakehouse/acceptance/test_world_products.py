@@ -130,6 +130,26 @@ def test_damage_and_insurance_match_the_lake():
     assert tuple(int(v) for v in got[0]) == tuple(int(v) for v in want) and 0 < want[3] < want[1]
 
 
+def test_damage_by_fight_and_kind_match_the_lake():
+    """2025's damage cost by kind of fight, and for the costliest single fight, as the lake sums them."""
+    got = dict(cube_rows(f"SELECT incident_type, MEASURE(damage_cost_usd) FROM incident_damage "
+                         f"WHERE incident_month {IN_YEAR} GROUP BY 1"))
+    con = lake.lake_ro_connect()
+    try:
+        want = dict(con.execute("SELECT i.incident_type, sum(d.cost_usd) FROM world_gold.fct_damage d "
+                                "LEFT JOIN world_gold.fct_incident i USING (incident_id) "
+                                "WHERE year(d.incident_month) = ? GROUP BY 1", [YEAR]).fetchall())
+        fight, cost = con.execute("SELECT incident_id, sum(cost_usd) FROM world_gold.fct_damage "
+                                  "WHERE year(incident_month) = ? GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 1",
+                                  [YEAR]).fetchone()
+    finally:
+        con.close()
+    assert len(want) > 1 and {k: int(v) for k, v in got.items()} == {k: int(v) for k, v in want.items()}
+    one = cube_rows(f"SELECT incident_id, MEASURE(damage_cost_usd) FROM incident_damage WHERE incident_id = {fight} "
+                    "GROUP BY 1")
+    assert [(int(i), int(c)) for i, c in one] == [(fight, int(cost))]
+
+
 def test_court_outcomes_match_the_lake():
     """Charges decided in 2025, by outcome; convictions; and the distinct people charged, as the lake counts them."""
     got = dict(cube_rows(f"SELECT outcome, MEASURE(charges) FROM court_outcomes WHERE decided_on {IN_YEAR} GROUP BY 1"))

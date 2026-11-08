@@ -143,6 +143,10 @@ cubes:
         sql: damage_id
         type: number
         primary_key: true
+      - name: incident_id
+        sql: incident_id
+        type: number
+        description: The fight that did the damage (world_gold.fct_incident); one fight can damage many assets.
       - name: incident_month
         sql: incident_month
         type: time
@@ -363,14 +367,16 @@ views:
 
   - name: incident_damage
     description: >
-      Incident damage: what the fights destroyed, by the fight's month, city and asset type; what it cost, what
-      insurance paid, and the uninsured cost. period_status says whether a month's numbers are final yet (they
-      wait on Insurance's claims as well as Field Operations' reports).
+      Incident damage: what the fights destroyed, by the fight (incident_id), its kind (incident_type), month and
+      city, and asset type; what it cost, what insurance paid, and the uninsured cost. period_status says whether a
+      month's numbers are final yet (they wait on Insurance's claims as well as Field Operations' reports).
     meta: {product: incident-damage, reads: [mart_readiness.period_readiness, world_gold.dim_location, world_gold.fct_damage, world_gold.fct_incident]}
     cubes:
       - join_path: world_damage
-        includes: [incident_month, asset_type, insured, repair_status, assessments, damage_cost_usd,
+        includes: [incident_id, incident_month, asset_type, insured, repair_status, assessments, damage_cost_usd,
                    insurance_paid_usd, uninsured_cost_usd, avg_days_to_repair]
+      - join_path: world_damage.world_incidents
+        includes: [incident_type]
       - join_path: world_damage.world_incidents.world_cities
         includes: [city_name]
       - join_path: world_damage.incident_damage_readiness

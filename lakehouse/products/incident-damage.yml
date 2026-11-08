@@ -5,12 +5,12 @@ domain: Field Operations
 owner: Lakehouse stewards
 question: What do fights destroy each month, what does insurance pay, and what is left uninsured?
 description: >
-  Every damage assessment from the expanded world's fights, by the month of the fight, the city and the kind of
-  asset: what it cost, whether it was insured, what insurance paid and how long the repair took. The uninsured cost
-  is what nobody covered. No restricted or personal columns.
+  Every damage assessment from the expanded world's fights, by the fight (its incident_id), its kind, its month and
+  city, and the kind of asset: what it cost, whether it was insured, what insurance paid and how long the repair
+  took. The uninsured cost is what nobody covered. No restricted or personal columns.
 tables:            # what the product delivers: none may hold a restricted or personal column
   - world_gold.fct_damage
-sources:           # where its data comes from: the city comes from the fight
+sources:           # where its data comes from: the fight's kind and city come from the fight
   - world_gold.fct_incident
   - world_gold.dim_location
 cube_views: [incident_damage]
