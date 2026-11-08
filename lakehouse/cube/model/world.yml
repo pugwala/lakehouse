@@ -83,6 +83,10 @@ cubes:
         sql: participant_id
         type: number
         primary_key: true
+      - name: incident_id
+        sql: incident_id
+        type: number
+        description: The fight the person took part in (world_gold.fct_incident); filter by it for one fight's people.
       - name: incident_month
         sql: incident_month
         type: time
@@ -353,13 +357,13 @@ views:
 
   - name: fight_participants
     description: >
-      Who took part in the fights: by month, side, role in the fight, what became of them, and who they are by
+      Who took part in the fights: by fight (incident_id), month, side, role in the fight, what became of them, and who they are by
       common name (SUPERMAN, JOKER) and person_role (hero, villain, ...). Count people with people_involved
       (distinct person keys, never summed); participations counts each person once per fight.
     meta: {product: field-incidents, reads: [mart_readiness.period_readiness, world_gold.dim_person, world_gold.fct_participation]}
     cubes:
       - join_path: world_participation
-        includes: [incident_month, side, role, status, participations, people_involved]
+        includes: [incident_id, incident_month, side, role, status, participations, people_involved]
       - join_path: world_participation.world_people
         includes: [common_name, person_role]
       - join_path: world_participation.field_incidents_readiness

@@ -306,13 +306,17 @@ An MCP server at `https://<LAKE_TS_HOST>/mcp` gives an agent twelve read-only to
   description, data product, dimensions and aggregation. `countDistinct` marks a count of distinct people, whose
   values never add up across groups. A name in several views (`people_in_custody`) is picked with `view.name`.
 - `query_metric(metric, group_by=[], filters=[], time_dimension=None, date_from=None, date_to=None,
-  granularity=None, limit=100)`: a Cube measure by name (`record_count`, `total_restitution`, `answers_changed`,
+  granularity=None, limit=100, order=None)`: a Cube measure by name (`record_count`, `total_restitution`, `answers_changed`,
   ...), optionally grouped by dimensions (`custody_level`, `unit_name`, `offense_against`, ...), filtered
   (`[{"dimension": "custody_level", "operator": "equals", "values": ["G5"]}]`; `notEquals` keeps empty values, as
   Cube does), and over a time range (`date_from`, `date_to`, inclusive, by `day` to `year`; a view with one time
   dimension uses it unasked). It goes through Cube's REST API, so it sees only Cube's model, and a filter on a
-  masked column compares the masked value (`race_code` equals `W` finds nothing). A bad name, operator, time
-  dimension, granularity or date says what would work.
+  masked column compares the masked value (`race_code` equals `W` finds nothing). `order` (`"desc"` or `"asc"`)
+  sorts by the metric, ties by the groups, for a top or bottom N: the five costliest fights are `damage_cost_usd`
+  grouped by `incident_id`, `order="desc"`, `limit=5`; a fight's people are `people_involved` by `common_name` and
+  `person_role`, filtered on `incident_id` (`fight_participants`). Without `order`, grouped rows come largest first
+  (Cube's default) and a series by granularity in time order. A bad name, operator, time dimension, granularity,
+  date or order says what would work.
 - `define_term(term)`: a glossary term from OpenMetadata, matched by name or synonym in any case, with its typed
   relations in both directions. An edit made in OpenMetadata's UI shows up at once.
 - `business_rules(about=None)`: the rulebook from Fuseki, all of it or the rules about one term or synonym ("fight"
@@ -364,12 +368,14 @@ An MCP server at `https://<LAKE_TS_HOST>/mcp` gives an agent twelve read-only to
   and runbook (Watchdog aside; `watchdog` says it's beating), and the vitals: disk use of `/` and `/lake`, memory
   available, the certificate's days left, and the age of the latest catalog backup, off-machine backup and restore
   drill.
-- `search_incident_reports(text=None, kind=None, city=None, date_from=None, date_to=None, limit=10)`: the
+- `search_incident_reports(text=None, kind=None, city=None, date_from=None, date_to=None, incident_id=None,
+  limit=10)`: the
   expanded world's 200,000 incident reports, searched through Cube's `incident_reports` view, which reads
-  `world_gold.incident_report_redacted`: every name, alias, SID, birth date and phone the mention key marks reads
-  `[PERSON NAME]`, `[ALIAS]`, `[SID]`, `[BIRTH DATE]` or `[PHONE]`, so nobody can be found by name and no raw
-  narrative reaches an agent. Words or a phrase (any case), a kind (`field report`, `witness statement`,
-  `desk report`), a city, and filing dates narrow it; the answer is how many match and the newest (up to 50), with
+  `world_gold.incident_report_redacted`: every real name, SID, birth date and phone the mention key marks reads
+  `[PERSON NAME]`, `[SID]`, `[BIRTH DATE]` or `[PHONE]`, so nobody can be found by real name and no raw narrative
+  reaches an agent; heroes' and villains' common names (aliases) are public and kept. Words or a phrase (any case),
+  a kind (`field report`, `witness statement`, `desk report`), a city, filing dates and a fight's `incident_id`
+  narrow it; the answer is how many match and the newest (up to 50), with
   the fight's kind, month and city. The lab redacts by the key, the world's own record of each detail; a real
   platform would use a detector, which the text sessions teach.
 

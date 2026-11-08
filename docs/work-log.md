@@ -132,6 +132,16 @@ cd ~/lakehouse/lakehouse && docker compose --profile core exec -T jupyter pytest
 - [ ] Site probe also fetches one of each page's scripts, so a blank page alerts (found 2026-11-07 with the OpenMetadata fix)
 - [x] Common names, chunk 2: famous villains (Joker, Magneto, Loki, ...) in the world, famous heroes as heroes and frequent; rebuild the world lake; regenerate the sessions' answer keys
 
+## 2026-11-07 · The agent finds the costliest fights and who fought in them
+
+**Result.** "Top 5 fights by damage, and their heroes and villains" is three agent calls on governed data: `query_metric` takes `order` ("desc" or "asc") on the metric; `fight_participants` offers `incident_id`, so one fight's people come back by common name; `search_incident_reports` filters by `incident_id`.
+
+**What we found.** An agent had said it needed `incident_id` on `incident_damage` (added earlier today) and sorting by a measure. Sorting already worked by accident: Cube puts the largest values first when no order is asked for, so the agent's top 5 matched SQL's `ORDER BY ... DESC`; but nothing said so, and ascending wasn't possible. The real gap was per-fight lookup: neither `fight_participants` nor the report search could take a fight. Most fights have no report (200,000 reports, 1.2M fights).
+
+**What we did.** Tests first: `tests/test_fight_lookup.py` (3 offline, red) and `acceptance/test_mcp_fights.py` (4 live against the lake, red), then green. `cube/model/world.yml` (an `incident_id` dimension on `world_participation`, in `fight_participants`); `mcp/server.py` (`order`, with the default stated in the tool description and an earlier, clearer refusal; the `incident_id` filter and answer field). README tool entries updated, including a stale `[ALIAS]` (aliases have been kept since the common-names work). User Guide: the two tool rows and a new "Good questions" line.
+
+**What verified it.** 110 live tests across MCP, Cube, products and the analyst path pass. 5 deliberate breaks caught, after the refusal test was tightened: Cube refuses a bad order by itself too, so the test now requires our clearer wording. Two first-run failures were test bugs (civilians have no common name; the costliest fight has no reports).
+
 ## 2026-11-07 · User Guide: the last pre-analyst-path wording
 
 **Result.** Asked whether the User Guide was up to date, I found five places still written for one Jupyter, now fixed: the "Query data" row, the restricted-columns header and Cube cell (real names aren't served at all), the opening line of "Query the complete lakehouse", OpenMetadata step 2 (`Sensitivity.Restricted` means masked, or never served), and the tools table (Lab Jupyter and a new Analyst Jupyter row). Snapshot `docs/user-guide.md` refreshed with this log's.

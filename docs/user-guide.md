@@ -160,7 +160,7 @@ Several people can share one common name: copycats, or five Green Lanterns. So c
 | Tool | What it's for | Ask it | It answered |
 | --- | --- | --- | --- |
 | `list_metrics` | Everything you can measure | What can I measure? | 36 metrics across 13 views; people counts are distinct, never added across groups |
-| `query_metric` | A governed number, with filters and dates | `people_in_custody` by `custody_level` | G2 29,006 · G3 26,037 · G1 13,871 · ...; October 31 is provisional, waiting on Classification |
+| `query_metric` | A governed number, with filters, dates and a sort order (order desc or asc, for a top or bottom N) | `people_in_custody` by `custody_level` | G2 29,006 · G3 26,037 · G1 13,871 · ...; October 31 is provisional, waiting on Classification |
 | `define_term` | A business definition | `SID` | "One SID for life, the same on every record that person has"; synonyms SID, person ID |
 | `business_rules` | The rules about a term | about `fight` | "A charge follows its fight, and its outcome follows the charge", enforced by a dbt test |
 | `data_product_info` | A product's promise and whether to trust this month | `court outcomes` | Its question, tables, views and contract; October provisional, waiting on the Courts liaison; fresh |
@@ -170,7 +170,7 @@ Several people can share one common name: copycats, or five Green Lanterns. So c
 | `lineage` | What a table or metric is built from, and what a change would reach | `people_in_custody` | 2 views reading 4 tables, 12 tables upstream |
 | `pipeline_status` | Whether the jobs ran | job `daily_lake` | Runs at 05:00 Central; last success and any failure |
 | `platform_health` | Whether the platform is healthy | (nothing) | Healthy: 11 sites and 7 targets up, no alerts, disk and backups fine |
-| `search_incident_reports` | The incident reports, with every personal detail replaced (common names kept) | `bridge`, witness statements | 2,017 reports, heroes and villains by their common names, real names shown as `[PERSON NAME]` and so on |
+| `search_incident_reports` | The incident reports, with every personal detail replaced (common names kept), by words, kind, city, dates or one fight's incident\_id | `bridge`, witness statements | 2,017 reports, heroes and villains by their common names, real names shown as `[PERSON NAME]` and so on |
 
 **Good questions to try:**
 
@@ -178,6 +178,7 @@ Several people can share one common name: copycats, or five Green Lanterns. So c
 - "If world\_silver.incident changed, what would break?"
 - "Did last night's load work, and is anything alerting?"
 - "How many fights in Gotham City this year, and are those numbers final?"
+- "What were the five costliest fights, and which heroes and villains were in them?" (`query_metric` on `damage_cost_usd` by `incident_id` with order desc, then `people_involved` by `common_name` for each fight, and `search_incident_reports` for what was written)
 
 **What it can't do.** It can't run SQL, write anything, see a raw name or a restricted value, or start and stop jobs. The server holds no lake credentials and no admin login.
 

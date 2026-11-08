@@ -5,7 +5,7 @@ Tools
     list_metrics()                                    every metric query_metric offers: its view, data product,
                                                       description, aggregation and dimensions
     query_metric(metric, group_by=None, filters=None, time_dimension=None, date_from=None, date_to=None,
-                 granularity=None, limit=100)
+                 granularity=None, limit=100, order=None)
                                                       a Cube measure by name, optionally grouped by dimensions,
                                                       filtered, and over a time range by day, week, month, quarter
                                                       or year; a data product's metric also says which months are
@@ -38,7 +38,8 @@ Tools
                                                       failed steps, last success; one job's recent runs
     platform_health()                                 healthy, warning or critical: sites, scrape targets, alerts
                                                       firing (with runbooks), disks, memory, certificate, backups
-    search_incident_reports(text=None, kind=None, city=None, date_from=None, date_to=None, limit=10)
+    search_incident_reports(text=None, kind=None, city=None, date_from=None, date_to=None, incident_id=None,
+                            limit=10)
                                                       the incident reports with every personal detail replaced:
                                                       how many match, and the newest
 
@@ -497,7 +498,7 @@ def time_window(measure, time_dimension, date_from, date_to, granularity, cat):
 @server.tool()
 def query_metric(metric: str, group_by: list[str] | None = None, filters: list[MetricFilter] | None = None,
                  time_dimension: str | None = None, date_from: str | None = None, date_to: str | None = None,
-                 granularity: str | None = None, limit: int = 100) -> MetricResult:
+                 granularity: str | None = None, limit: int = 100, order: str | None = None) -> MetricResult:
     """A governed metric from Cube by name (for example record_count, total_restitution, people_in_custody),
     optionally grouped by dimensions (for example custody_level, unit_name, offense_against, or common_name: a hero's
     or villain's public name, SUPERMAN, on fight_participants and court_outcomes), filtered (for
@@ -508,7 +509,13 @@ def query_metric(metric: str, group_by: list[str] | None = None, filters: list[M
     range). Short names work; an unknown name returns the real ones. Only Cube's model is reachable: restricted
     columns come back masked, and a filter on one compares the masked value. A metric from a data product also
     returns readiness: whether its latest month-end is final, and which months are still provisional and who they
-    wait on; say so when you report a provisional month."""
+    wait on; say so when you report a provisional month. order: "desc" (largest first) or "asc" (smallest first) on
+    the metric, with limit for a top or bottom N: the 5 costliest fights are damage_cost_usd grouped by incident_id,
+    order "desc", limit 5; ties are broken by the group_by dimensions. Without order, grouped rows come largest first
+    and a series by granularity comes in time order. A fight's people: people_involved grouped by common_name and
+    person_role, filtered on incident_id."""
+    if order is not None and order not in ("asc", "desc"):
+        raise ToolError(f"No order {order!r}. order is \"desc\" (largest first) or \"asc\" (smallest first)")
     cat = catalog()
     filters = filters or []
     for f in filters:
@@ -537,6 +544,8 @@ def query_metric(metric: str, group_by: list[str] | None = None, filters: list[M
             window["granularity"] = granularity
             query["order"] = {tdim: "asc"}
         query["timeDimensions"] = [window]
+    if order:   # the metric first, then the groups, so ties come back in a fixed order
+        query["order"] = [[measure, order]] + [[d, "asc"] for d in group_dims]
     data = cube("load", {"query": query})
     short = lambda full: full.split(".", 1)[1]   # noqa: E731
     period = f"{tdim}.{granularity}" if tdim and granularity else None
@@ -1404,12 +1413,14 @@ class Report(BaseModel):
 
 
 class ReportSearch(BaseModel):
-    """search_incident_reports' answer: what was searched for, how many reports match, and the newest of them."""
+    """search_incident_reports' answer: what was searched for (incident_id: one fight), how many reports match, and
+    the newest of them."""
     text: str | None
     kind: str | None
     city: str | None
     date_from: str | None
     date_to: str | None
+    incident_id: int | None = None
     matches: int
     reports: list[Report]
     note: str
@@ -1422,7 +1433,7 @@ def whole(value):
 
 @server.tool()
 def search_incident_reports(text: str | None = None, kind: str | None = None, city: str | None = None,
-                            date_from: str | None = None, date_to: str | None = None,
+                            date_from: str | None = None, date_to: str | None = None, incident_id: int | None = None,
                             limit: int = 10) -> ReportSearch:
     """Search what heroes, witnesses and the desk wrote about the expanded world's fights (200,000 incident reports),
     with every personal detail already replaced: real names, SIDs, birth dates and phone numbers read [PERSON NAME],
@@ -1430,17 +1441,19 @@ def search_incident_reports(text: str | None = None, kind: str | None = None, ci
     (aliases) are public and kept, so text can be one (Wolverine). text: words or a phrase the report contains, in any
     case (heist, bridge collapse, "taken into custody"). kind: field report (a hero who was there),
     witness statement (a civilian) or desk report (the call as the desk took it). city: the fight's city. date_from,
-    date_to: the filing dates, YYYY-MM-DD, inclusive. Give at least one. Returns how many reports match and the newest
+    date_to: the filing dates, YYYY-MM-DD, inclusive. incident_id: one fight's reports (from query_metric grouped by
+    incident_id, for example the costliest fights on incident_damage). Give at least one. Returns how many reports match and the newest
     limit of them (10; at most 50), each with its fight's kind, month and city. Count with query_metric (metric reports,
     view incident_reports) to break matches down by city, kind or month."""
-    if not any((text, kind, city, date_from, date_to)):
-        raise ToolError("Give text to search for (words or a phrase, any case), a kind, a city, or filing dates "
-                        "(date_from, date_to)")
+    if not any((text, kind, city, date_from, date_to)) and incident_id is None:
+        raise ToolError("Give text to search for (words or a phrase, any case), a kind, a city, filing dates "
+                        "(date_from, date_to) or a fight's incident_id")
     if kind is not None and kind not in REPORT_KINDS:
         raise ToolError(f"No kind {kind!r}. Kinds: {', '.join(REPORT_KINDS)}")
     date_from, date_to = a_day(date_from, "date_from"), a_day(date_to, "date_to")
     filters = [{"member": REPORTS + member, "operator": op, "values": [value]} for member, op, value in
-               (("narrative", "contains", text), ("report_kind", "equals", kind), ("city_name", "equals", city))
+               (("narrative", "contains", text), ("report_kind", "equals", kind), ("city_name", "equals", city),
+                ("report_incident_id", "equals", None if incident_id is None else str(incident_id)))
                if value]
     query = {"filters": filters}
     if date_from or date_to:
@@ -1458,7 +1471,7 @@ def search_incident_reports(text: str | None = None, kind: str | None = None, ci
                       report_kind=r.get(REPORTS + "report_kind"), filed_at=r.get(REPORTS + "filed_at"),
                       incident_type=r.get(REPORTS + "incident_type"), incident_month=day(r.get(REPORTS + "incident_month")),
                       city=r.get(REPORTS + "city_name"), narrative=r.get(REPORTS + "narrative")) for r in rows]
-    return ReportSearch(text=text, kind=kind, city=city, date_from=date_from, date_to=date_to,
+    return ReportSearch(text=text, kind=kind, city=city, date_from=date_from, date_to=date_to, incident_id=incident_id,
                         matches=whole(counted[0][REPORTS + "reports"]) if counted else 0, reports=reports,
                         note="Personal details are replaced before the search, from world_gold.incident_report_redacted.")
 
